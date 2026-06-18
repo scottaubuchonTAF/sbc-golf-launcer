@@ -1,9 +1,9 @@
 {
-  "name": "SBC Money",
-  "short_name": "SBC Money",
+  "name": "SBC Golf",
+  "short_name": "SBC Golf",
   "display": "standalone",
-  "background_color": "#0d3b36",
-  "theme_color": "#0E9384",
+  "background_color": "#0b1f33",
+  "theme_color": "#0b1f33",
   "start_url": "/",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
