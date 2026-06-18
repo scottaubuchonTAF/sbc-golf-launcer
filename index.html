@@ -1,0 +1,2681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SBC Money</title>
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SBC Money">
+<meta name="theme-color" content="#0f766e">
+<script src="https://accounts.google.com/gsi/client" onload="gsiReady()" async defer></script>
+<style>
+:root{
+  --teal-900:#0d3b36; --teal-800:#11514a; --teal-700:#0f766e; --teal-600:#0d9488;
+  --teal-500:#14b8a6; --teal-300:#5eead4; --teal-50:#f0fdfa; --teal-100:#ccfbf1;
+  --ink:#0f172a; --ink-2:#475569; --ink-3:#94a3b8;
+  --bg:#f6f8fa; --card:#ffffff; --line:#e2e8f0;
+  --red:#dc2626; --red-bg:#fef2f2; --green:#059669; --amber:#d97706;
+  --radius:16px; --shadow:0 1px 3px rgba(15,23,42,.06),0 4px 16px rgba(15,23,42,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;
+  background:var(--bg); color:var(--ink);
+  padding-bottom:calc(64px + env(safe-area-inset-bottom));
+}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select{font:inherit}
+
+/* ================= layout: phone tabs / desktop sidebar ================= */
+.shell{max-width:680px;margin:0 auto;padding:16px 16px 24px}
+nav.tabs{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;
+  display:flex;background:var(--card);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+nav.tabs button{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:8px 0 6px;color:var(--ink-3);font-size:11px;font-weight:600;position:relative;
+}
+nav.tabs button.on{color:var(--teal-700)}
+nav.tabs svg{width:22px;height:22px}
+nav.tabs .badge{
+  position:absolute;top:3px;left:calc(50% + 6px);
+  background:var(--red);color:#fff;font-size:10px;font-weight:700;
+  border-radius:99px;padding:1px 5px;min-width:16px;text-align:center;
+}
+aside.side{display:none}
+.topbar{display:none}
+
+@media(min-width:900px){
+  body{padding-bottom:0}
+  nav.tabs{display:none}
+  .app{display:flex;min-height:100vh}
+  aside.side{
+    display:flex;flex-direction:column;gap:2px;width:236px;flex-shrink:0;
+    background:var(--teal-900);padding:22px 14px 18px;position:sticky;top:0;height:100vh;
+  }
+  aside.side .brand{padding:2px 10px 20px}
+  aside.side .navlbl{color:#5d837d;font-size:10.5px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;padding:14px 12px 6px}
+  aside.side button.nav{
+    display:flex;align-items:center;gap:11px;color:#9fc0bb;font-weight:600;
+    padding:10px 12px;border-radius:10px;text-align:left;font-size:14px;width:100%;
+  }
+  aside.side button.nav svg{width:18px;height:18px;flex-shrink:0}
+  aside.side button.nav.on{background:rgba(255,255,255,.12);color:#fff}
+  aside.side button.nav:hover{color:#fff}
+  aside.side .badge{margin-left:auto;background:var(--teal-500);color:#fff;
+    font-size:11px;font-weight:700;border-radius:99px;padding:1px 7px}
+  aside.side .foot{margin-top:auto;color:#6e958f;font-size:11px;padding:0 12px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .main{flex:1;min-width:0}
+  .shell{max-width:1240px;padding:30px 40px 56px;margin:0}
+  .shell.narrow{max-width:860px}
+  .topbar{display:flex;align-items:baseline;justify-content:space-between;
+    max-width:1240px;padding:26px 40px 0;color:var(--ink-3);font-size:13px}
+}
+
+/* ================= dashboard ================= */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+@media(min-width:900px){.stats{grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}}
+.stat{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px}
+.stat .lbl{font-size:11.5px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em}
+.stat .num{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-top:3px;font-variant-numeric:tabular-nums}
+@media(min-width:900px){.stat .num{font-size:28px}}
+.stat .sub{font-size:12px;color:var(--ink-3);margin-top:3px}
+.stat.hero{background:linear-gradient(135deg,var(--teal-700),var(--teal-600));color:#fff}
+.stat.hero .lbl,.stat.hero .sub{color:rgba(255,255,255,.8)}
+.bar{height:7px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:9px}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--teal-500)}
+.stat.hero .bar{background:rgba(255,255,255,.25)} .stat.hero .bar i{background:#fff}
+.dashcols{display:block}
+@media(min-width:900px){.dashcols{display:grid;grid-template-columns:1.25fr 1fr;gap:20px;align-items:start}}
+
+/* ================= cards / lists ================= */
+.grp{margin-bottom:18px;break-inside:avoid}
+.grp h3{font-size:12.5px;font-weight:700;color:var(--ink-2);text-transform:uppercase;
+  letter-spacing:.05em;margin:0 4px 8px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.envrow{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.envrow:last-child{border-bottom:none}
+.envrow .nm{flex:1;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.envrow .bal{font-weight:700;font-variant-numeric:tabular-nums}
+.envrow .bal.neg{color:var(--red);background:var(--red-bg);padding:2px 8px;border-radius:8px}
+.envgrid{display:block}
+@media(min-width:900px){.envgrid{columns:2;column-gap:20px}}
+@media(min-width:1240px){.envgrid{columns:3}}
+.fundrow{padding:11px 16px;border-bottom:1px solid var(--line)}
+.fundrow:last-child{border-bottom:none}
+.fundrow .l1{display:flex;justify-content:space-between;gap:10px;font-size:13.5px}
+.fundrow .l1 .nm{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fundrow .l1 .v{color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ================= inbox / txn cards ================= */
+.txncard{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:18px;margin-bottom:14px}
+.txncard .top{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.txncard .desc{font-weight:700;font-size:15.5px;min-width:0}
+.txncard .amt{font-weight:800;font-size:17px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.txncard .amt.neg{color:var(--ink)} .txncard .amt.pos{color:var(--green)}
+.txncard .meta{color:var(--ink-3);font-size:12.5px;margin-top:3px}
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.pill{
+  border:1.5px solid var(--line);border-radius:99px;padding:7px 14px;font-weight:600;
+  font-size:13.5px;background:var(--card);color:var(--ink-2);
+}
+.pill.sugg{border-color:var(--teal-600);background:var(--teal-50);color:var(--teal-700)}
+.pill.sel{background:var(--teal-600);border-color:var(--teal-600);color:#fff}
+.actions{display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap}
+.btn{
+  border-radius:99px;padding:11px 22px;font-weight:700;font-size:14.5px;
+  background:var(--teal-600);color:#fff;transition:opacity .15s;
+}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.ghost{background:var(--teal-50);color:var(--teal-700)}
+.btn.danger{background:var(--red-bg);color:var(--red)}
+.btn.sm{padding:7px 14px;font-size:13px}
+.rulechk{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-2);margin-left:auto}
+
+/* ================= split editor ================= */
+.splitbox{margin-top:14px;border:1.5px dashed var(--line);border-radius:12px;padding:12px}
+.splitline{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.splitline .envbtn{
+  flex:1;min-width:0;text-align:left;border:1.5px solid var(--line);border-radius:10px;
+  padding:9px 12px;font-weight:600;font-size:13.5px;background:var(--bg);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.splitline .envbtn.unset{color:var(--ink-3);font-weight:500}
+.splitline input{
+  width:108px;padding:9px 10px;border:1.5px solid var(--line);border-radius:10px;
+  text-align:right;background:var(--card);font-variant-numeric:tabular-nums;
+}
+.splitline input:focus{outline:none;border-color:var(--teal-500)}
+.splitline .rm{color:var(--ink-3);font-size:17px;padding:4px 6px}
+.splitfoot{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-top:4px}
+.splitfoot .left{color:var(--teal-700);font-weight:700;font-variant-numeric:tabular-nums}
+.splitfoot .left.bad{color:var(--red)}
+.addline{color:var(--teal-700);font-weight:700;font-size:13px}
+
+/* ================= picker overlay ================= */
+.ovl{position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:60;display:flex;
+  align-items:flex-end;justify-content:center}
+@media(min-width:900px){.ovl{align-items:center}}
+.panel{background:var(--card);border-radius:18px 18px 0 0;width:100%;max-width:520px;
+  max-height:78vh;display:flex;flex-direction:column;padding:16px}
+@media(min-width:900px){.panel{border-radius:18px}}
+.panel input{
+  width:100%;padding:11px 14px;border:1.5px solid var(--line);border-radius:12px;
+  background:var(--bg);margin-bottom:8px;
+}
+.panel input:focus{outline:none;border-color:var(--teal-500)}
+.picklist{overflow:auto;flex:1;border:1px solid var(--line);border-radius:12px}
+.picklist button{display:flex;width:100%;justify-content:space-between;gap:10px;
+  padding:10px 14px;font-size:14px;border-bottom:1px solid var(--line);text-align:left}
+.picklist button:last-child{border-bottom:none}
+.picklist button:hover{background:var(--teal-50)}
+.picklist .g{color:var(--ink-3);font-size:12px;white-space:nowrap}
+.panel.confirm{max-width:400px;padding:20px}
+.panel.confirm .cmsg{font-weight:600;font-size:15px;line-height:1.5;white-space:pre-line}
+.panel.confirm .actions{margin-top:16px}
+
+/* ================= transactions view ================= */
+.searchbar{display:flex;gap:10px;margin-bottom:14px}
+.searchbar input{
+  flex:1;padding:11px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);
+}
+.searchbar input:focus{outline:none;border-color:var(--teal-500)}
+.regrow{padding:13px 16px;border-bottom:1px solid var(--line)}
+.regrow:last-child{border-bottom:none}
+.regrow .l1{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.regrow .desc{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.regrow .amt{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.regrow .amt.pos{color:var(--green)}
+.regrow .meta{color:var(--ink-3);font-size:12px;margin-top:2px}
+.legchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.legchip{background:var(--teal-50);color:var(--teal-800);font-size:12px;font-weight:600;
+  border-radius:8px;padding:3px 9px}
+.reglinks{display:flex;gap:14px;margin-top:8px}
+.reglinks button{color:var(--teal-700);font-weight:700;font-size:12.5px}
+.reglinks button.warn{color:var(--red)}
+
+/* ================= plans ================= */
+.plancard{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:18px;margin-bottom:14px}
+.plancard .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.phead{cursor:pointer;user-select:none}
+.plansec{margin-top:22px}
+.sechead{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);margin-bottom:6px}
+.sechead .sectitle{font-size:14px;font-weight:800;color:var(--ink-2);text-transform:uppercase;letter-spacing:.04em;margin:0}
+.sechead .grow{flex:1}
+.dh-rename{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.dh-rename input{font-size:16px;font-weight:700;padding:6px 9px;border:1px solid var(--line);border-radius:8px;min-width:140px;flex:1}
+.unarch{color:var(--teal-700);font-weight:700;font-size:12.5px;margin-left:auto}
+.phead .chev{color:var(--ink-3);font-size:12px;margin-right:2px;align-self:center}
+.phead .nm{flex:1}
+.versblock .phead{margin-bottom:4px}
+.plancard .nm{font-weight:700;font-size:15.5px}
+.plancard .mode{font-size:11.5px;font-weight:700;color:var(--teal-700);background:var(--teal-50);
+  border-radius:8px;padding:2px 8px;text-transform:uppercase;letter-spacing:.04em}
+.plancard.inactive{opacity:.55}
+.planlines{margin-top:10px;font-size:13.5px}
+.planlines .pl{display:flex;justify-content:space-between;gap:10px;padding:5px 0;
+  border-bottom:1px dashed var(--line)}
+.planlines .pl:last-child{border-bottom:none}
+.planlines .v{color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.formrow{margin-bottom:12px}
+.formrow label{display:block;font-size:12.5px;font-weight:700;color:var(--ink-2);margin-bottom:4px}
+.formrow input[type=text],.formrow select{
+  width:100%;padding:10px 13px;border:1.5px solid var(--line);border-radius:11px;background:var(--card);
+}
+.formrow input:focus,.formrow select:focus{outline:none;border-color:var(--teal-500)}
+.plform .splitline input{width:88px}
+.plform .splitline input.pct{width:64px}
+.remchk{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-2);white-space:nowrap}
+
+/* ================= envelopes: groups + detail ================= */
+.envrow.click{cursor:pointer}
+.stat.click{cursor:pointer}
+.stat.click:hover{outline:1px solid rgba(57,208,189,.35)}
+.envrow.click:hover{background:var(--teal-50)}
+.envrow .chev{color:var(--ink-3);font-size:16px;margin-left:2px}
+.card.income{border-left:4px solid var(--teal-500);border-radius:var(--radius)}
+.grpcard{margin-bottom:12px}
+.ghead{display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;
+  border-bottom:1px solid var(--line);user-select:none}
+.ghead:hover{background:var(--teal-50)}
+.ghead .gnm{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ghead .gcount{color:var(--ink-3);font-size:12px;background:var(--bg);border-radius:8px;padding:1px 8px}
+.ghead .bal{font-weight:700;font-variant-numeric:tabular-nums}
+.ghead .bal.neg{color:var(--red)}
+.garrow{color:var(--ink-3);font-size:17px;font-weight:700;transition:transform .15s;display:inline-block}
+.garrow.open{transform:rotate(90deg)}
+.backlink{color:var(--teal-700);font-weight:700;font-size:14px;margin:0 0 12px;display:block}
+.detailhead{padding:18px 0 0}
+.detailhead .dh1{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:0 16px}
+.detailhead .dnm{font-weight:800;font-size:19px;letter-spacing:-.01em}
+.detailhead .dgrp{color:var(--ink-3);font-size:12.5px;margin-top:2px}
+.detailhead .dbal{font-weight:800;font-size:24px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.detailhead .dbal.neg{color:var(--red)}
+.detailhead .splitbox{margin:14px 16px 16px}
+.mvlbl{font-weight:700;font-size:13px;color:var(--ink-2)}
+.filterbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:-4px 0 14px}
+.filterbar select{padding:8px 12px;border:1.5px solid var(--line);border-radius:99px;
+  background:var(--card);font-size:13px;font-weight:600;color:var(--ink-2);max-width:260px}
+.filterbar select:focus{outline:none;border-color:var(--teal-500)}
+.acctchip{background:var(--bg);border:1px solid var(--line);color:var(--ink-2);
+  font-size:11.5px;font-weight:600;border-radius:8px;padding:1px 7px}
+
+/* ================= balances (v3.2) ================= */
+.nwhero{background:linear-gradient(135deg,#059669,#10b981);color:#fff;border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:16px 18px;display:flex;justify-content:space-between;
+  align-items:center;margin-bottom:16px}
+.nwhero .lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.85}
+.nwhero .num{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.balcols{display:block}
+@media(min-width:900px){.balcols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}}
+.balsect{display:flex;justify-content:space-between;align-items:center;background:var(--ink);
+  color:#fff;border-radius:10px;padding:9px 14px;font-size:12.5px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.05em;margin:0 0 12px}
+.balsect .v{font-variant-numeric:tabular-nums;font-size:14px}
+.balgrp{margin-bottom:14px}
+.balgrp .bhead{display:flex;justify-content:space-between;align-items:center;
+  background:var(--teal-700);color:#fff;padding:8px 14px;font-size:12.5px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.04em}
+.balgrp .bhead .v{font-variant-numeric:tabular-nums;font-size:13.5px}
+.balrow{display:flex;align-items:baseline;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line)}
+.balrow:last-child{border-bottom:none}
+.balrow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:13.5px}
+.balrow .upd{color:var(--ink-3);font-size:11.5px;white-space:nowrap}
+.balrow .upd.stale{color:var(--red);font-style:italic}
+.balrow .bal{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13.5px}
+.balrow .baledit{flex:none;cursor:pointer;border:none;background:none;color:var(--teal-700);font-size:13px;padding:0 2px;line-height:1}
+.balrow.stale .nm,.balrow.stale .bal{color:var(--ink-3);font-style:italic}
+
+/* ================= history / misc ================= */
+.oprow{display:flex;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);align-items:center}
+.oprow:last-child{border-bottom:none}
+.oprow .what{flex:1;min-width:0}
+.oprow .note{font-weight:600;font-size:14px}
+.oprow .sub{color:var(--ink-3);font-size:12px;margin-top:1px}
+.oprow .undone{color:var(--ink-3);font-size:12px;font-style:italic}
+.empty{color:var(--ink-3);text-align:center;padding:48px 16px;font-size:14.5px}
+.spin{width:26px;height:26px;border:3px solid var(--teal-100);border-top-color:var(--teal-600);
+  border-radius:50%;animation:sp 1s linear infinite;margin:48px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:84px;z-index:80;
+  background:var(--ink);color:#fff;border-radius:12px;padding:11px 18px;font-size:14px;
+  font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:0;transition:opacity .25s;
+  pointer-events:none;max-width:90vw;
+}
+.toast.show{opacity:1}
+@media(min-width:900px){.toast{bottom:32px}}
+h2.viewtitle{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:2px 4px 16px}
+.viewhead{display:flex;justify-content:space-between;align-items:center;margin:2px 4px 16px}
+.viewhead h2{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:0}
+.morelist .envrow{cursor:pointer}
+.morelist .envrow:hover{background:var(--teal-50)}
+.aboutwrap{display:flex;flex-direction:column;align-items:center;text-align:center;padding:56px 16px}
+.aboutwrap .abname{font-size:28px;font-weight:800;letter-spacing:-.02em;margin-top:18px}
+.aboutwrap .abname span{color:var(--teal-600)}
+.aboutwrap .abver{font-size:14px;font-weight:700;color:var(--ink-2);margin-top:6px;
+  background:var(--teal-50);color:var(--teal-700);border-radius:99px;padding:4px 14px}
+.aboutwrap .absub{font-size:13px;color:var(--ink-3);margin-top:14px}
+.aboutwrap .absoon{font-size:13px;color:var(--ink-3);margin-top:34px;font-style:italic}
+
+/* ================= sign-in (v3 standalone) ================= */
+.signin{position:fixed;inset:0;z-index:100;background:var(--teal-900);display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  text-align:center;color:#fff;padding:24px}
+.signin .sname{font-size:26px;font-weight:800;letter-spacing:-.02em}
+.signin .sname span{color:var(--teal-300)}
+.signin .shint{color:#9fc0bb;font-size:13px;max-width:300px}
+.signin .serr{color:#fca5a5;font-size:13px;max-width:320px;min-height:18px}
+</style>
+</head>
+<body>
+<div class="signin" id="signin" style="display:none">
+  <img src="icon-192.png" width="96" height="96" style="border-radius:22px" alt="SBC Money">
+  <div class="sname">SBC <span>Money</span></div>
+  <div id="gsiBtn"></div>
+  <div class="serr" id="signinErr"></div>
+  <div class="shint">Sign in with your family Google account.</div>
+</div>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <svg width="158" height="42" viewBox="0 0 220 60" aria-label="SBC Money">
+        <rect x="10" y="1" width="70" height="42" rx="8" fill="#0a5e55"/>
+        <rect x="6" y="5" width="70" height="42" rx="8" fill="#0c7c70"/>
+        <rect x="2" y="9" width="70" height="42" rx="8" fill="#0d9488"/>
+        <rect x="8" y="15" width="58" height="30" rx="5" fill="none" stroke="#5eead4" stroke-width="1.6"/>
+        <rect x="23.8" y="21.6" width="1.4" height="3.6" rx="0.7" fill="#ffffff"/>
+        <rect x="23.8" y="35.5" width="1.4" height="3.6" rx="0.7" fill="#ffffff"/>
+        <rect x="49.9" y="21.6" width="1.4" height="3.6" rx="0.7" fill="#ffffff"/>
+        <rect x="49.9" y="35.5" width="1.4" height="3.6" rx="0.7" fill="#ffffff"/>
+        <text x="24.5" y="36.5" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff" font-family="inherit">S</text>
+        <text x="37" y="36.5" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff" font-family="inherit">B</text>
+        <text x="49.5" y="36.5" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff" font-family="inherit">C</text>
+        <text x="88" y="38" font-size="22" font-weight="800" fill="#ffffff" letter-spacing="-0.3" font-family="inherit">SBC <tspan fill="#5eead4">Money</tspan></text>
+      </svg>
+    </div>
+    <button class="nav" data-v="dash"></button>
+    <button class="nav" data-v="inbox"></button>
+    <button class="nav" data-v="fund"></button>
+    <div class="navlbl">Money</div>
+    <button class="nav" data-v="envelopes"></button>
+    <button class="nav" data-v="txns"></button>
+    <button class="nav" data-v="balances"></button>
+    <button class="nav" data-v="accounts"></button>
+    <div class="navlbl">More</div>
+    <button class="nav" data-v="settings"></button>
+    <div class="foot" id="sideFoot"></div>
+  </aside>
+  <div class="main">
+    <div class="topbar"><span id="greet"></span><span id="todayLbl"></span></div>
+    <div class="shell" id="shell"><div class="spin"></div></div>
+  </div>
+</div>
+
+<nav class="tabs">
+  <button data-v="dash"></button>
+  <button data-v="inbox"></button>
+  <button data-v="fund"></button>
+  <button data-v="envelopes"></button>
+  <button data-v="settings"></button>
+</nav>
+
+<div class="toast" id="toast"></div>
+<div id="ovl"></div>
+
+<script>
+/* ============================ config (v3 standalone) ============================ */
+/* ⬇️ 1. Apps Script web app URL — plain /macros/s/ form, NOT /a/macros/ ⬇️ */
+var EXEC_URL = 'https://script.google.com/macros/s/AKfycbyzvzQEx27XIohQybzhTj8jQE-x-TfjfnfEALjZ7DKpILJkVOl7DJNC-t-sBnbLkhxBcA/exec';
+/* ⬇️ 2. OAuth Web client ID from Google Cloud console (must match
+        CFG.OAUTH_CLIENT_ID in Config.gs) ⬇️ */
+var CLIENT_ID = '284358082799-1jm14talthngajlaeope3reaq4qk7968.apps.googleusercontent.com';
+/* ⬆️ ------------------------------------------------------------------ ⬆️ */
+
+/* ============================ helpers ============================ */
+var state = {
+  view:'dash', boot:null, dash:null, inbox:null, picker:null, history:null,
+  sel:{}, split:{}, register:{q:'', account:'', envelope:'', includeHidden:false, items:null}, resplit:{},
+  plans:null, planEdit:null, fund:{}, pickCtx:null,
+  accounts:null, accountsFull:null, balances:null, sync:null, envOpen:{}, envDetail:null, move:null,
+  envTxnCache:{}, confirmRes:null, importing:false
+};
+try{ state.envOpen = JSON.parse(localStorage.getItem('sbcEnvOpen')||'{}'); }catch(e){ state.envOpen={}; }
+function $(s){ return document.querySelector(s); }
+function $all(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); }
+/* Frontend build label — bump on EVERY GitHub upload, in lockstep with
+   CFG.APP_VERSION (server). About shows both; a mismatch means one side of
+   the two-sided deploy didn't take. */
+var FE_VERSION = 'v3.14.0';
+function esc(s){ var d=document.createElement('div'); d.textContent=String(s==null?'':s); return d.innerHTML; }
+function money(n){
+  var v = Math.abs(Number(n)||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  return (n<0?'-$':'$')+v;
+}
+function cents(n){ return Math.round((Number(n)||0)*100); }
+function toast(msg){
+  var t=$('#toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._h); t._h=setTimeout(function(){t.classList.remove('show');},2600);
+}
+function fail(e){
+  $('#shell').innerHTML = '<div class="empty">⚠ '+esc(e && e.message || e)+'</div>';
+}
+/* v3.6: approve/fund responses carry a tillerWrite status — reflect it in
+   the success toast. An error here never blocked the approval (backend
+   guarantees that); the daily sweep will pick the cell up later. */
+function tillerNote(base, r){
+  var w = r && r.tillerWrite;
+  if(w && w.error) return base + ' — Tiller category not written (daily sweep will retry)';
+  if(w && w.written) return base + ' · Tiller ✓';
+  return base;
+}
+function envName(id){
+  if(!state.picker) return id;
+  var e = state.picker.find(function(x){return x.id===id;});
+  return e ? e.name : id;
+}
+
+/* ============================ auth (Google Identity Services) ============================ */
+var auth = { token:'', email:'', exp:0 };
+try{ var a0 = JSON.parse(localStorage.getItem('sbcAuth')||'{}'); if(a0.token) auth = a0; }catch(e){}
+var authWaiters = [];
+var gsiUp = false;
+function authValid(){ return !!auth.token && (Date.now()/1000) < (auth.exp - 90); }
+function persistAuth(){ try{ localStorage.setItem('sbcAuth', JSON.stringify(auth)); }catch(e){} }
+function gsiReady(){
+  gsiUp = true;
+  google.accounts.id.initialize({ client_id: CLIENT_ID, callback: onCredential, auto_select: true });
+  var b = $('#gsiBtn');
+  if(b) google.accounts.id.renderButton(b, { theme:'outline', size:'large', shape:'pill', text:'signin_with' });
+  /* silent one-tap refresh for returning users */
+  if(!authValid()) google.accounts.id.prompt();
+}
+function onCredential(resp){
+  try{
+    var p = JSON.parse(atob(resp.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+    auth = { token: resp.credential, email: String(p.email||''), exp: Number(p.exp)||0 };
+    persistAuth();
+  }catch(e){ return; }
+  $('#signin').style.display = 'none';
+  $('#signinErr').textContent = '';
+  authWaiters.splice(0).forEach(function(r){ r(); });
+  if(!state.boot) boot();
+}
+function ensureAuth(){
+  if(authValid()) return Promise.resolve();
+  $('#signin').style.display = 'flex';
+  if(gsiUp) google.accounts.id.prompt();
+  return new Promise(function(res){ authWaiters.push(res); });
+}
+/* Transport: POST {token, fn, args} as text/plain (no preflight) to the
+   Apps Script JSON API. On auth failure: clear, re-sign-in, retry once. */
+function run(fn){
+  var args = Array.prototype.slice.call(arguments,1);
+  return ensureAuth().then(function(){ return apiCall_(fn, args, true); });
+}
+function apiCall_(fn, args, retry){
+  return fetch(EXEC_URL, { method:'POST', body: JSON.stringify({ token:auth.token, fn:fn, args:args }) })
+  .then(function(r){
+    if(!r.ok) throw new Error('Network error ('+r.status+')');
+    return r.json();
+  })
+  .then(function(res){
+    if(res.ok) return res.result;
+    if(res.auth){
+      auth = { token:'', email:'', exp:0 }; persistAuth();
+      if(/allowlist/.test(res.error||'')){
+        var el = $('#signinErr'); if(el) el.textContent = res.error;
+        throw new Error(res.error);
+      }
+      if(retry) return ensureAuth().then(function(){ return apiCall_(fn, args, false); });
+    }
+    throw new Error(res.error || 'Server error');
+  });
+}
+/* ============================ icons + nav ============================ */
+var ICONS = {
+  dash:'<path d="M3 12l9-8 9 8M5 10v9h5v-5h4v5h5v-9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  inbox:'<path d="M3 13l3-8h12l3 8v6H3zM3 13h5l1.5 2.5h5L16 13h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  fund:'<path d="M12 3v3M12 18v3M16.7 8a3 3 0 0 0-2.7-2h-4a3 3 0 0 0 0 6h4a3 3 0 0 1 0 6h-4a3 3 0 0 1-2.7-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  envelopes:'<rect x="3" y="5" width="18" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 7l8 6 8-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  plans:'<path d="M5 4h14v16H5zM9 4v16M5 9h14M5 14h14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  txns:'<path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  accounts:'<path d="M3 9.5l9-5.5 9 5.5M4.5 9.5V18M9.5 9.5V18M14.5 9.5V18M19.5 9.5V18M3 18h18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
+  balances:'<path d="M12 4v2.5M12 4l-6 2.5M12 4l6 2.5M6 6.5L3.5 12a3 3 0 0 0 5 0L6 6.5zM18 6.5L15.5 12a3 3 0 0 0 5 0L18 6.5zM12 6.5V19M8.5 19h7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  sync:'<path d="M20 12a8 8 0 0 1-14.6 4.5M4 12a8 8 0 0 1 14.6-4.5M18.6 3v4.5H14M5.4 21v-4.5H10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
+  history:'<path d="M12 8v4l3 2M21 12a9 9 0 11-2.6-6.3M21 3v4h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  more:'<circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/>',
+  settings:'<path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M19.4 13a7.7 7.7 0 0 0 0-2l1.7-1.3-1.7-3-2 .8a7.6 7.6 0 0 0-1.7-1l-.3-2.1H9.6l-.3 2.1a7.6 7.6 0 0 0-1.7 1l-2-.8-1.7 3L5.6 11a7.7 7.7 0 0 0 0 2l-1.7 1.3 1.7 3 2-.8c.5.4 1.1.7 1.7 1l.3 2.1h4.8l.3-2.1c.6-.3 1.2-.6 1.7-1l2 .8 1.7-3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>',
+  admin:'<circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 20a7 7 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+  logout:'<path d="M15 4h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3M10 12h9M16 9l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
+  about:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v5M12 7.5v.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'
+};
+var NAV_LABELS = {dash:'Dashboard', inbox:'Inbox', fund:'Fund', envelopes:'Envelopes',
+  plans:'Funding plans', txns:'Transactions', accounts:'Accounts', balances:'Balances',
+  sync:'Sync', history:'History', more:'More', settings:'Settings', admin:'Access', about:'About'};
+function icon(k){ return '<svg viewBox="0 0 24 24" aria-hidden="true">'+ICONS[k]+'</svg>'; }
+
+$all('aside.side button.nav').forEach(function(b){
+  var v=b.dataset.v;
+  b.innerHTML = icon(v)+'<span>'+NAV_LABELS[v]+'</span>'+
+    (v==='inbox'?'<span class="badge" id="sideBadge" style="display:none"></span>':'');
+  b.addEventListener('click', function(){ go(v); });
+});
+$all('nav.tabs button').forEach(function(b){
+  var v=b.dataset.v;
+  b.innerHTML = icon(v)+(v==='inbox'?'<span class="badge" id="tabBadge" style="display:none"></span>':'')+
+    '<span>'+(v==='dash'?'Home':NAV_LABELS[v])+'</span>';
+  b.addEventListener('click', function(){ go(v); });
+});
+function go(view){
+  state.view = view;
+  $all('[data-v]').forEach(function(b){
+    b.classList.toggle('on', b.dataset.v===view ||
+      (b.dataset.v==='envelopes' && view==='envdetail') ||
+      (b.dataset.v==='settings' && ['settings','more','sync','history','about','healthset','admin','removetxn','reconcile'].indexOf(view)!==-1));
+  });
+  render();
+}
+
+/* ============================ boot ============================ */
+function boot(){
+  run('apiBoot').then(function(res){
+    state.boot = res.boot; state.picker = res.picker;
+    updateBadges(state.boot.inboxCount);
+    $('#sideFoot').innerHTML = '<div style="margin-bottom:7px;word-break:break-all">'+esc(state.boot.user)+'</div>'+
+      '<button data-act="logout" style="width:100%;padding:7px 10px;border-radius:8px;cursor:pointer;'+
+      'background:rgba(255,255,255,.08);color:#d7efe9;border:1px solid rgba(255,255,255,.16);font-size:12.5px">Log out</button>';
+    var h = new Date().getHours();
+    var nm = String(auth.email || state.boot.user || '').split('@')[0];
+    nm = nm ? nm.charAt(0).toUpperCase()+nm.slice(1) : '';
+    $('#greet').textContent = (h<12?'Good morning':h<17?'Good afternoon':'Good evening')+(nm?', '+nm:'');
+    $('#todayLbl').textContent = new Date().toLocaleDateString(undefined,
+      {weekday:'long', month:'long', day:'numeric'});
+    render();
+    prewarm();
+  }).catch(fail);
+}
+/* Warm every view's cache in the background after load (staggered so the
+   visible view's calls win). First click on any page is then instant. */
+function prewarm(){
+  setTimeout(function(){
+    if(!state.inbox) run('apiGetInbox').then(function(r){
+      state.inbox=r; updateBadges(r.length);
+      if(state.view==='inbox' && !userBusy()) drawInbox();
+    }).catch(function(){});
+  }, 300);
+  setTimeout(function(){
+    if(!state.dash) run('apiDashboard').then(function(d){
+      state.dash=d; if(state.view==='dash') renderDash();
+    }).catch(function(){});
+  }, 1000);
+  setTimeout(function(){
+    if(!state.plans) run('apiPlans').then(function(p){ state.plans=p; }).catch(function(){});
+  }, 1800);
+  setTimeout(function(){
+    if(!state.accounts) run('apiAccounts').then(function(a){ state.accounts=a; }).catch(function(){});
+  }, 2600);
+  setTimeout(function(){
+    var r=state.register;
+    if(!r.items) run('apiRegister',{q:'',account:'',envelope:'',includeHidden:false,limit:50}).then(function(it){
+      r.items=it; r.sig='|||0';
+    }).catch(function(){});
+  }, 3400);
+  setTimeout(function(){
+    if(!state.accountsFull) run('apiAccountsFull').then(function(a){ state.accountsFull=a; }).catch(function(){});
+  }, 4200);
+}
+function refreshBoot(){
+  return run('apiBootstrap').then(function(b){
+    state.boot=b; updateBadges(b.inboxCount);
+  });
+}
+function updateBadges(n){
+  ['#tabBadge','#sideBadge'].forEach(function(s){
+    var el=$(s); if(el){ el.textContent=n; el.style.display = n>0?'':'none'; }
+  });
+}
+/* After any mutation: drop derived caches so views refetch fresh data. */
+function invalidateData(){
+  state.dash = null;
+  state.envTxnCache = {};
+  state.register.sig = null;
+  state.sync = null;
+}
+/* Skip background re-draws while the user is typing or mid-edit. */
+function userBusy(){
+  return (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) ||
+    Object.keys(state.resplit).length > 0;
+}
+
+/* ============================ render dispatch ============================ */
+function render(){
+  if(!state.boot){ return; }
+  var shell = $('#shell');
+  shell.className = 'shell' + (['inbox','fund','more','settings','admin','removetxn','reconcile','history','envelopes','envdetail','about','healthset'].indexOf(state.view)!==-1 ? ' narrow':'');
+  if(state.view==='dash') renderDash();
+  else if(state.view==='inbox') renderInbox();
+  else if(state.view==='fund') renderFund();
+  else if(state.view==='envelopes') renderEnvelopes();
+  else if(state.view==='envdetail') renderEnvDetail();
+  else if(state.view==='plans') renderPlans();
+  else if(state.view==='txns') renderTxns();
+  else if(state.view==='accounts') renderAccounts();
+  else if(state.view==='balances') renderBalances();
+  else if(state.view==='sync') renderSync();
+  else if(state.view==='more' || state.view==='settings') renderSettings();
+  else if(state.view==='admin') renderAdmin();
+  else if(state.view==='removetxn') renderRemoveTxn();
+  else if(state.view==='reconcile') renderReconcile();
+  else if(state.view==='healthset') renderHealthSettings();
+  else if(state.view==='about') renderAbout();
+  else renderHistory();
+}
+
+/* ============================ dashboard ============================ */
+function renderDash(){
+  var b = state.boot;
+  var d = state.dash;
+  var pct = d && d.totals.target>0 ? Math.min(100, Math.round(d.totals.funded/d.totals.target*100)) : 0;
+  // v3.6: hero = Available to fund (income-envelope cash); Funded counts only
+  // real Fund-flow money; Spent comes from the Tiller sheet by date (includes
+  // txns still awaiting approval); inbox chip navigates to the Inbox.
+  var spentNum = d ? (d.spentActual!=null ? d.spentActual : d.totals.spent) : null;
+  var h = '<div class="stats">'+
+    '<div class="stat hero click" data-act="goview" data-arg="fund"><div class="lbl">Available to fund</div>'+
+      '<div class="num">'+(d?money(d.availableToFund):'…')+'</div>'+
+      '<div class="sub">in the income pool · put it to work →</div></div>'+
+    '<div class="stat"><div class="lbl">Funded · '+(d?esc(d.monthLabel):'this month')+'</div>'+
+      '<div class="num">'+(d?money(d.totals.funded):'…')+'</div>'+
+      (d?'<div class="bar"><i style="width:'+pct+'%"></i></div>'+
+        '<div class="sub">'+pct+'% of '+money(d.totals.target)+' budget</div>'
+       :'<div class="sub">loading…</div>')+'</div>'+
+    '<div class="stat"><div class="lbl">Spent this month</div>'+
+      '<div class="num">'+(spentNum!=null?money(spentNum):'…')+'</div>'+
+      '<div class="sub">'+(d&&d.spentActual!=null?'all transactions, incl. pending':'from approved transactions')+'</div></div>'+
+    '<div class="stat click" data-act="goview" data-arg="inbox">'+
+      '<div class="lbl">Waiting in inbox</div>'+
+      '<div class="num">'+b.inboxCount+'</div>'+
+      '<div class="sub">tap to review →</div></div>'+
+    '</div>';
+
+  h += '<div class="dashcols"><div>';
+  h += '<div class="grp"><h3 style="display:flex;justify-content:space-between;align-items:center">Budget health'+
+    '<button class="btn ghost sm" data-act="goview" data-arg="healthset" title="Health settings">⚙</button></h3><div class="card">';
+  if(!d){ h += '<div class="empty">Loading…</div>'; }
+  else if(!d.health || d.health.error){
+    h += '<div class="empty">Couldn’t read account balances'+
+      (d&&d.health&&d.health.error?': '+esc(d.health.error):'')+'</div>';
+  } else {
+    var H = d.health;
+    h += '<div class="envrow"><span class="nm">Envelopes total · on-budget</span>'+
+      '<span class="bal">'+money(H.envelopes)+'</span></div>';
+    h += '<div class="envrow"><span class="nm">Bank cash · checking + savings − cards</span>'+
+      '<span class="bal">'+money(H.bank)+'</span></div>';
+    if(Number(H.offBudget)!==0){
+      h += '<div class="envrow"><span class="nm" style="opacity:.6">Off-budget envelopes (excluded)</span>'+
+        '<span class="bal" style="opacity:.6">'+money(H.offBudget)+'</span></div>';
+    }
+    if(Number(H.pendingInbox)!==0){
+      h += '<div class="envrow click" data-act="goview" data-arg="inbox">'+
+        '<span class="nm">Pending approval (inbox)</span>'+
+        '<span class="bal">'+money(H.pendingInbox)+'</span></div>';
+    }
+    h += H.ok
+      ? '<div class="envrow"><span class="nm">✓ Envelopes match your accounts</span>'+
+          '<span class="bal">'+money(H.residual)+'</span></div>'
+      : '<div class="envrow"><span class="nm">⚠ Off by</span>'+
+          '<span class="bal neg">'+money(H.residual)+'</span></div>';
+    if(d.negatives && d.negatives.count){
+      h += '<div class="envrow click" data-act="goview" data-arg="envelopes">'+
+        '<span class="nm">'+d.negatives.count+' negative envelope'+(d.negatives.count===1?'':'s')+'</span>'+
+        '<span class="bal neg">'+money(d.negatives.total)+'</span></div>';
+    }
+    if(H.stalest){
+      h += '<div class="envrow"><span class="nm" style="opacity:.6">Oldest balance update</span>'+
+        '<span class="bal" style="opacity:.6">'+esc(H.stalest)+'</span></div>';
+    }
+  }
+  h += '</div><div style="margin-top:8px;text-align:right">'+
+    '<button class="btn ghost sm" data-act="goview" data-arg="envelopes">All envelopes →</button></div></div>';
+  h += '</div><div>';
+  h += '<div class="grp"><h3>Target vs funded · '+(d?esc(d.monthLabel):'')+'</h3><div class="card">';
+  if(!d){ h += '<div class="empty">Loading…</div>'; }
+  else if(!d.rows.length){ h += '<div class="empty">No targets or funding activity yet this month.</div>'; }
+  else {
+    d.rows.slice(0,14).forEach(function(r){
+      var p = r.target>0 ? Math.min(100, Math.round(r.funded/r.target*100)) : (r.funded>0?100:0);
+      h += '<div class="fundrow"><div class="l1"><span class="nm">'+esc(r.name)+'</span>'+
+        '<span class="v">'+money(r.funded)+' / '+money(r.target)+'</span></div>'+
+        '<div class="bar"><i style="width:'+p+'%"></i></div></div>';
+    });
+  }
+  h += '</div></div></div></div>';
+  $('#shell').innerHTML = h;
+  if(!state.dash){
+    run('apiDashboard').then(function(d){
+      state.dash = d;
+      if(state.view==='dash') renderDash();
+    }).catch(function(){ /* dashboard is best-effort */ });
+  }
+}
+
+/* ============================ envelopes ============================ */
+function envRowHtml(e){
+  return '<div class="envrow click" data-act="env-open" data-arg="'+esc(e.id)+'">'+
+    '<span class="nm">'+esc(e.name)+'</span>'+
+    '<span class="bal'+(e.balance<0?' neg':'')+'">'+money(e.balance)+'</span>'+
+    '<span class="chev">›</span></div>';
+}
+function renderEnvelopes(){
+  var b = state.boot;
+  var income = [], groups = [];
+  b.groups.forEach(function(g){
+    var vis = g.envelopes.filter(function(e){ return !e.hidden; });
+    var inc = vis.filter(function(e){ return e.type==='Income'; });
+    var exp = vis.filter(function(e){ return e.type!=='Income'; });
+    income = income.concat(inc);
+    if(exp.length){
+      var tot = 0;
+      exp.forEach(function(e){ tot += cents(e.balance); });
+      groups.push({ name:g.name, envs:exp, total:tot/100 });
+    }
+  });
+
+  var h = '<div class="viewhead"><h2>Envelopes</h2>'+
+    '<button class="btn sm" data-act="env-new">+ New envelope</button></div>';
+  if(state.envNew){ h += envNewFormHtml(); }
+  if(income.length){
+    h += '<div class="grp"><h3>Income</h3><div class="card income">';
+    income.forEach(function(e){ h += envRowHtml(e); });
+    h += '</div></div>';
+  }
+  groups.forEach(function(g){
+    var open = state.envOpen[g.name] !== false; // default open
+    h += '<div class="card grpcard">'+
+      '<div class="ghead" data-act="grp-toggle" data-arg="'+esc(g.name)+'">'+
+      '<span class="garrow'+(open?' open':'')+'">›</span>'+
+      '<span class="gnm">'+esc(g.name)+'</span>'+
+      '<span class="gcount">'+g.envs.length+'</span>'+
+      '<span class="bal'+(g.total<0?' neg':'')+'">'+money(g.total)+'</span></div>';
+    if(open){
+      g.envs.forEach(function(e){ h += envRowHtml(e); });
+    }
+    h += '</div>';
+  });
+  h += archivedSectionHtml();
+  $('#shell').innerHTML = h;
+  // Lazy-load the archived list when that section is expanded.
+  if(state.showArchived && !state.archived){
+    run('apiArchivedEnvelopes').then(function(list){
+      state.archived = list;
+      if(state.view==='envelopes') renderEnvelopes();
+    }).catch(function(e){ toast('⚠ '+(e.message||e)); });
+  }
+}
+function envNewFormHtml(){
+  var n = state.envNew;
+  var groups = (state.boot.groups||[]).map(function(g){ return g.name; });
+  return '<div class="card plform" style="padding:16px;margin-bottom:14px">'+
+    '<div class="formrow"><label>Name</label>'+
+    '<input type="text" id="enName" value="'+esc(n.name||'')+'" placeholder="e.g. Vacation 🌴"></div>'+
+    '<div class="formrow"><label>Group</label>'+
+    '<input type="text" id="enGroup" list="enGroupList" value="'+esc(n.group||'')+'" placeholder="e.g. Savings">'+
+    '<datalist id="enGroupList">'+groups.map(function(g){ return '<option value="'+esc(g)+'">'; }).join('')+'</datalist></div>'+
+    '<div class="formrow"><label>Type</label><select id="enType">'+
+    ['Expense','Income','Transfer'].map(function(t){
+      return '<option value="'+t+'"'+((n.type||'Expense')===t?' selected':'')+'>'+t+'</option>'; }).join('')+
+    '</select></div>'+
+    '<div class="actions"><button class="btn" data-act="env-new-save">Create</button>'+
+    '<button class="btn ghost" data-act="env-new-cancel">Cancel</button></div></div>';
+}
+function archivedSectionHtml(){
+  var open = !!state.showArchived;
+  var h = '<div class="plansec"><div class="sechead phead" data-act="env-show-archived">'+
+    '<span class="chev">'+(open?'▾':'▸')+'</span>'+
+    '<h3 class="sectitle">Archived</h3><span class="grow"></span></div>';
+  if(open){
+    var list = state.archived;
+    if(!list){ h += '<div class="spin"></div>'; }
+    else if(!list.length){ h += '<div class="empty">No archived envelopes.</div>'; }
+    else { list.forEach(function(e){
+      h += '<div class="envrow"><span class="nm">'+esc(e.name)+'</span>'+
+        '<span class="acctchip">'+esc(e.group)+'</span>'+
+        '<button class="unarch" data-act="env-unarchive" data-arg="'+esc(e.id)+'">Unarchive</button></div>';
+    }); }
+  }
+  return h+'</div>';
+}
+
+/* ============================ envelope detail ============================ */
+function findEnv(id){
+  var hit = null;
+  state.boot.groups.forEach(function(g){ g.envelopes.forEach(function(e){
+    if(e.id===id) hit = { id:e.id, name:e.name, type:e.type, balance:e.balance, group:g.name };
+  });});
+  return hit;
+}
+function openEnvelope(id){
+  state.envDetail = { id:id, txns:null, filter:'all' };
+  state.move = null;
+  go('envdetail');
+}
+function renderEnvDetail(){
+  var d = state.envDetail;
+  if(!d){ go('envelopes'); return; }
+  var e = findEnv(d.id);
+  if(!e){ go('envelopes'); return; }
+  var renaming = state.envRename && state.envRename.id===e.id;
+  var h = '<button class="backlink" data-act="env-back">‹ Envelopes</button>'+
+    '<div class="card detailhead"><div class="dh1"><div style="flex:1">'+
+    (renaming
+      ? '<div class="dh-rename"><input type="text" id="renInput" value="'+esc(state.envRename.name)+'">'+
+        '<button class="btn sm" data-act="env-rename-save">Save</button>'+
+        '<button class="btn ghost sm" data-act="env-rename-cancel">Cancel</button></div>'
+      : '<div class="dnm">'+esc(e.name)+'</div>')+
+    '<div class="dgrp">'+esc(e.group)+(e.type==='Income'?' · income':'')+'</div></div>'+
+    '<div class="dbal'+(e.balance<0?' neg':'')+'">'+money(e.balance)+'</div></div>';
+  if(state.move){
+    var m = state.move;
+    h += '<div class="splitbox" style="margin-top:14px">'+
+      '<div class="splitline"><span class="mvlbl">To</span>'+
+      '<button class="envbtn'+(m.toId?'':' unset')+'" data-act="open-picker" data-arg="moveto|x|0">'+
+      (m.toId?esc(envName(m.toId)):'Pick envelope…')+'</button>'+
+      '<input type="number" step="0.01" inputmode="decimal" placeholder="0.00" value="'+(m.amount||'')+
+      '" data-act="move-amt"></div>'+
+      '<div class="actions" style="margin-top:6px">'+
+      '<button class="btn sm" data-act="env-move-go">Move</button>'+
+      '<button class="btn ghost sm" data-act="env-move-cancel">Cancel</button></div></div>';
+  } else {
+    // v3.6.12: one-tap sweep of an income envelope's full balance into the
+    // Income Cash Pool (the income→envelope→pool→fund flow). Partial moves
+    // still available via "Move money".
+    var poolId = state.boot.incomePoolId;
+    var canSweep = (e.type==='Income' && e.id!==poolId && e.balance>0);
+    h += '<div class="actions" style="margin-top:14px;padding:0 16px 16px;flex-wrap:wrap">'+
+      (canSweep ? '<button class="btn sm" data-act="env-sweep-pool">→ Move all to pool</button>' : '')+
+      '<button class="btn '+(canSweep?'ghost ':'')+'sm" data-act="env-move-start">⇄ Move money</button>'+
+      (renaming ? '' : '<button class="btn ghost sm" data-act="env-rename">Rename</button>')+
+      (e.id===poolId ? '' : '<button class="btn ghost sm" data-act="env-archive" data-arg="'+esc(e.id)+'">Archive</button>')+
+      '</div>';
+  }
+  h += '</div>';
+  h += '<div class="grp" style="margin-top:18px"><h3>Activity</h3>'+
+    '<div class="filterbar" style="margin:0 0 10px">'+
+    '<button class="pill'+(d.filter==='all'?' sel':'')+'" data-act="env-filter" data-arg="all">All activity</button>'+
+    '<button class="pill'+(d.filter==='spend'?' sel':'')+'" data-act="env-filter" data-arg="spend">Spending only</button>'+
+    '</div><div class="card" id="envTxns">';
+  if(!d.txns){ h += '<div class="spin"></div>'; }
+  else {
+    var items = d.filter==='spend'
+      ? d.txns.filter(function(t){ return t.kind!=='journal'; })
+      : d.txns;
+    if(!items.length){
+      h += '<div class="empty">'+(d.filter==='spend'
+        ? 'No transactions assigned to this envelope yet.'
+        : 'No activity in this envelope yet.')+'</div>';
+    }
+    items.forEach(function(t){
+      var isJ = t.kind==='journal';
+      var chip = isJ
+        ? '<span class="legchip">'+esc({allocation:'funded',income:'income',move:'moved',
+            adjustment:'adjustment',cover:'cover',undo:'undo'}[t.type]||t.type)+'</span>'
+        : '<span class="acctchip">'+esc(t.account)+'</span>';
+      h += '<div class="regrow"><div class="l1"><span class="desc">'+esc(t.description)+'</span>'+
+        '<span class="amt'+(t.amount>0?' pos':'')+'">'+money(t.amount)+'</span></div>'+
+        '<div class="meta">'+esc(t.date)+' · '+chip+'</div></div>';
+    });
+  }
+  h += '</div></div>';
+  $('#shell').innerHTML = h;
+  if(!d.txns){
+    if(state.envTxnCache[d.id]){
+      d.txns = state.envTxnCache[d.id];
+      renderEnvDetail();
+      return;
+    }
+    run('apiEnvelopeTxns', d.id, 150, {funding:true}).then(function(txns){
+      state.envTxnCache[d.id] = txns;
+      if(state.envDetail && state.envDetail.id===d.id){
+        state.envDetail.txns = txns;
+        if(state.view==='envdetail') renderEnvDetail();
+      }
+    }).catch(function(e){ toast('⚠ '+(e.message||e)); });
+  }
+}
+function envNewSave(){
+  var name = (($('#enName')||{}).value||'').trim();
+  var group = (($('#enGroup')||{}).value||'').trim();
+  var type = ($('#enType')||{}).value || 'Expense';
+  if(!name){ toast('Name required'); return; }
+  var btn = document.querySelector('[data-act="env-new-save"]');
+  if(btn){ btn.disabled=true; btn.textContent='Creating…'; }
+  run('apiCreateEnvelope', { name:name, group:group||'Other', type:type })
+  .then(function(){ toast('Envelope created ✓'); state.envNew=null; invalidateData(); return refreshBoot(); })
+  .then(function(){ if(state.view==='envelopes') renderEnvelopes(); })
+  .catch(function(e){ if(btn){ btn.disabled=false; btn.textContent='Create'; } toast('⚠ '+(e.message||e)); });
+}
+function envRenameSave(){
+  var r = state.envRename; if(!r) return;
+  var name = (($('#renInput')||{}).value||'').trim();
+  if(!name){ toast('Name required'); return; }
+  var btn = document.querySelector('[data-act="env-rename-save"]');
+  if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
+  run('apiRenameEnvelope', { envelopeId:r.id, name:name })
+  .then(function(){ toast('Renamed ✓'); state.envRename=null; invalidateData();
+    if(state.envDetail) state.envDetail.txns=null; return refreshBoot(); })
+  .then(function(){ if(state.view==='envdetail') renderEnvDetail(); })
+  .catch(function(e){ if(btn){ btn.disabled=false; btn.textContent='Save'; } toast('⚠ '+(e.message||e)); });
+}
+function envArchive(id){
+  confirmUi('Archive this envelope? It will be hidden from your lists (unarchive later from Envelopes ▸ Archived). Its history is kept.', 'Archive')
+  .then(function(ok){
+    if(!ok) return;
+    run('apiArchiveEnvelope', { envelopeId:id, archive:true })
+    .then(function(){ toast('Archived ✓'); state.archived=null; invalidateData(); return refreshBoot(); })
+    .then(function(){ go('envelopes'); })
+    .catch(function(e){ toast('⚠ '+(e.message||e)); });
+  });
+}
+function envUnarchive(id){
+  run('apiArchiveEnvelope', { envelopeId:id, archive:false })
+  .then(function(){ toast('Unarchived ✓'); state.archived=null; invalidateData(); return refreshBoot(); })
+  .then(function(){ if(state.view==='envelopes') renderEnvelopes(); })
+  .catch(function(e){ toast('⚠ '+(e.message||e)); });
+}
+function moveGo(){
+  var m = state.move, d = state.envDetail;
+  if(!m || !d) return;
+  if(!m.toId){ toast('Pick a destination envelope'); return; }
+  var amt = Number(m.amount);
+  if(!(amt>0)){ toast('Enter a positive amount'); return; }
+  run('apiMove', { fromId:d.id, toId:m.toId, amount:amt })
+  .then(function(){
+    toast('Moved '+money(amt)+' ✓');
+    state.move = null;
+    invalidateData();
+    if(state.envDetail) state.envDetail.txns = null;
+    return refreshBoot();
+  }).then(function(){ if(state.view==='envdetail') renderEnvDetail(); })
+  .catch(function(e){ toast('⚠ '+(e.message||e)); });
+}
+function sweepToPool(){
+  var d = state.envDetail; if(!d) return;
+  var e = findEnv(d.id); if(!e) return;
+  var poolId = state.boot.incomePoolId;
+  if(!poolId){ toast('No Income Cash Pool configured'); return; }
+  if(e.id===poolId){ toast('That is the pool'); return; }
+  var amt = e.balance;
+  if(!(amt>0)){ toast('Nothing to move'); return; }
+  confirmUi('Move '+money(amt)+' from '+e.name+' into the Income Cash Pool?', 'Move to pool')
+  .then(function(ok){
+    if(!ok) return;
+    return run('apiMove', { fromId:e.id, toId:poolId, amount:amt })
+    .then(function(){
+      toast('Moved '+money(amt)+' to pool ✓');
+      state.move = null;
+      invalidateData();
+      if(state.envDetail) state.envDetail.txns = null;
+      return refreshBoot();
+    }).then(function(){ if(state.view==='envdetail') renderEnvDetail(); })
+    .catch(function(err){ toast('⚠ '+(err.message||err)); });
+  });
+}
+
+/* ============================ inbox + splits ============================ */
+function renderInbox(){
+  if(state.inbox){ drawInbox(); } // instant from cache…
+  else { $('#shell').innerHTML = '<h2 class="viewtitle">Inbox</h2><div class="spin"></div>'; }
+  run('apiGetInbox').then(function(rows){ // …refresh in background
+    var changed = JSON.stringify(rows) !== JSON.stringify(state.inbox);
+    state.inbox = rows;
+    updateBadges(rows.length);
+    if(state.view==='inbox' && (changed || !$('.txncard, .empty')) && !userBusy()) drawInbox();
+  }).catch(function(e){ if(!state.inbox) fail(e); });
+}
+function drawInbox(){
+  var h = '<div class="viewhead"><h2>Inbox</h2>'+
+    '<button class="btn ghost sm" data-act="import-now"'+(state.importing?' disabled':'')+
+    '>↻ Check for new</button></div>';
+  if(!state.inbox.length){
+    h += '<div class="empty">Inbox zero. Every transaction has a job.</div>';
+    $('#shell').innerHTML = h; return;
+  }
+  // v3.6.2: two sections — auto-categorized (rule suggestion or hand-picked
+  // envelope) with Approve all, and the rest that still need a category.
+  var autoTs=[], otherTs=[];
+  state.inbox.forEach(function(t){
+    if(state.sel[t.txnId] || t.suggestedId) autoTs.push(t); else otherTs.push(t);
+  });
+  var readyN = autoTs.filter(approveAllEligible).length;
+  if(autoTs.length){
+    h += '<div class="grp"><h3 style="display:flex;justify-content:space-between;align-items:center">'+
+      'Auto-categorized · '+autoTs.length+
+      (readyN ? '<button class="btn sm" data-act="approve-all">✓ Approve all ('+readyN+')</button>' : '')+
+      '</h3>';
+    autoTs.forEach(function(t){ h += inboxCardHtml(t); });
+    h += '</div>';
+  }
+  if(otherTs.length){
+    h += '<div class="grp"><h3>Needs a category · '+otherTs.length+'</h3>';
+    otherTs.forEach(function(t){ h += inboxCardHtml(t); });
+    h += '</div>';
+  }
+  $('#shell').innerHTML = h;
+}
+/* Eligible for Approve all: has an envelope and isn't mid-split. v3.6.11:
+   income is included — deposits approve into an income envelope (Regular Pay
+   etc., the default suggestion). You then move income → the Income Cash Pool
+   and fund envelopes from the pool on the Fund page. */
+function approveAllEligible(t){
+  var sp = state.split[t.txnId];
+  if(sp && sp.on) return false;
+  return !!(state.sel[t.txnId] || t.suggestedId);
+}
+function inboxCardHtml(t){
+  var h = '';
+  {
+    var sp = state.split[t.txnId];
+    var selId = state.sel[t.txnId] || t.suggestedId || '';
+    h += '<div class="txncard">'+
+      '<div class="top"><div class="desc">'+esc(t.description)+'</div>'+
+      '<div class="amt '+(t.amount<0?'neg':'pos')+'">'+money(t.amount)+'</div></div>'+
+      '<div class="meta">'+esc(t.date)+' · '+esc(t.account)+'</div>';
+    if(sp && sp.on){
+      h += splitEditorHtml(t.txnId, t.amount, sp.lines, 'inbox');
+      h += '<div class="actions">'+
+        '<button class="btn" '+(splitReady(t.amount, sp.lines)?'':'disabled')+
+          ' data-act="approve-split" data-arg="'+esc(t.txnId)+'">Approve split</button>'+
+        '<button class="btn ghost" data-act="split-off" data-arg="'+esc(t.txnId)+'">Cancel split</button>'+
+        '</div>';
+    } else {
+      h += '<div class="pills">';
+      if(t.suggestedId){
+        var cls = 'pill' + (t.suggestedId===selId ? ' sel' : ' sugg');
+        h += '<button class="'+cls+'" data-act="pick-sel" data-arg="'+esc(t.txnId)+'|'+esc(t.suggestedId)+'">'+
+          (t.suggestedId===selId?'':'✨ ')+esc(t.suggestedName)+'</button>';
+      }
+      if(selId && selId!==t.suggestedId){
+        h += '<button class="pill sel" data-act="open-picker" data-arg="sel|'+esc(t.txnId)+'">'+
+          esc(envName(selId))+'</button>';
+      }
+      h += '<button class="pill" data-act="open-picker" data-arg="sel|'+esc(t.txnId)+'">Choose envelope…</button>'+
+        '<button class="pill" data-act="split-on" data-arg="'+esc(t.txnId)+'">Split…</button>';
+      // v3.6.9: no per-txn funding — deposits are approved into the Income
+      // Cash Pool like everything else; funding happens on the Fund page.
+      h += '</div><div class="actions">'+
+        '<button class="btn" '+(selId?'':'disabled')+' data-act="approve" data-arg="'+esc(t.txnId)+'">Approve</button>'+
+        '<label class="rulechk"><input type="checkbox" id="rule-'+cssId(t.txnId)+'"> Always suggest this</label>'+
+        '</div>';
+    }
+    h += '</div>';
+  }
+  return h;
+}
+function approveAll(){
+  var items = state.inbox.filter(approveAllEligible).map(function(t){
+    return { txnId: t.txnId, envelopeId: state.sel[t.txnId] || t.suggestedId };
+  });
+  if(!items.length){ toast('Nothing ready to approve'); return; }
+  confirmUi('Approve '+items.length+' transaction'+(items.length===1?'':'s')+
+    ' into their suggested envelopes? Each stays individually undoable from History.', 'Approve all')
+  .then(function(ok){
+    if(!ok) return;
+    busyButtons(true);
+    run('apiApproveBatch', items).then(function(r){
+      var doneIds = {};
+      r.results.forEach(function(x){ if(!x.error) doneIds[x.txnId]=1; });
+      state.inbox = state.inbox.filter(function(t){ return !doneIds[t.txnId]; });
+      Object.keys(doneIds).forEach(function(id){ delete state.sel[id]; delete state.split[id]; });
+      invalidateData();
+      updateBadges(state.inbox.length);
+      refreshBoot();
+      drawInbox();
+      var failed = r.results.length - r.approved;
+      var msg = 'Approved '+r.approved+' ✓';
+      if(failed) msg += ' · '+failed+' failed (still in inbox)';
+      if(r.tillerWrite && r.tillerWrite.written) msg += ' · Tiller ✓';
+      toast(msg);
+    }).catch(function(e){ toast('⚠ '+(e.message||e)); drawInbox(); });
+  });
+}
+function cssId(s){ return String(s).replace(/[^a-zA-Z0-9_-]/g,'_'); }
+
+/* shared split editor (inbox + resplit + fund legs use the same line model) */
+function splitEditorHtml(key, total, lines, kind){
+  var sum = 0;
+  var h = '<div class="splitbox">';
+  lines.forEach(function(l,i){
+    sum += cents(splitAmt(total, l.amount));
+    h += '<div class="splitline">'+
+      '<button class="envbtn'+(l.envelopeId?'':' unset')+'" data-act="open-picker" data-arg="'+
+        kind+'line|'+esc(key)+'|'+i+'">'+(l.envelopeId?esc(envName(l.envelopeId)):'Pick envelope…')+'</button>'+
+      '<input type="number" step="0.01" inputmode="decimal" value="'+(l.amount!==''?l.amount:'')+
+        '" data-act="split-amt" data-arg="'+kind+'|'+esc(key)+'|'+i+'" placeholder="0.00">'+
+      '<button class="rm" data-act="split-rm" data-arg="'+kind+'|'+esc(key)+'|'+i+'">✕</button>'+
+      '</div>';
+  });
+  var left = cents(total)-sum;
+  h += '<div class="splitfoot">'+
+    '<button class="addline" data-act="split-add" data-arg="'+kind+'|'+esc(key)+'">+ Add envelope</button>'+
+    '<span class="left'+(left!==0?' bad':'')+'">'+(left===0?'Fully assigned ✓':'Remaining: '+money(Math.abs(left)/100))+'</span>'+
+    '</div></div>';
+  return h;
+}
+/* v3.6.3: split amounts are typed WITHOUT a sign — the transaction's sign
+   is applied automatically (a $-408 spend split as 204/204 means -204/-204).
+   Typing a minus anyway still works (abs first). */
+function splitAmt(total, v){
+  var n = Math.abs(Number(v)||0);
+  return Number(total)<0 ? -n : n;
+}
+function splitReady(total, lines){
+  if(!lines.length) return false;
+  var sum=0;
+  for(var i=0;i<lines.length;i++){
+    if(!lines[i].envelopeId || cents(splitAmt(total, lines[i].amount))===0) return false;
+    sum += cents(splitAmt(total, lines[i].amount));
+  }
+  return sum===cents(total);
+}
+function splitLinesOf(kind, key){
+  if(kind==='inbox') return (state.split[key]=state.split[key]||{on:true,lines:[]}).lines;
+  if(kind==='resplit') return (state.resplit[key]=state.resplit[key]||[]);
+  if(kind==='fund') return (state.fund[key]=state.fund[key]||{legs:[]}).legs;
+  return [];
+}
+function redrawFor(kind){
+  if(kind==='inbox') drawInbox();
+  else if(kind==='resplit') drawTxns();
+  else if(kind==='fund') drawFund();
+}
+
+/* approve (single + split) */
+function approve(txnId){
+  var t = state.inbox.find(function(x){ return x.txnId===txnId; });
+  var envId = state.sel[txnId] || (t&&t.suggestedId);
+  if(!envId || !t) return;
+  var ruleEl = $('#rule-'+cssId(txnId));
+  var createRule = ruleEl && ruleEl.checked ? t.description : null;
+  busyButtons(true);
+  run('apiApprove', { txnId:txnId, envelopeId:envId, createRule:createRule })
+    .then(afterApprove(txnId)).catch(approveErr);
+}
+function approveSplit(txnId){
+  var sp = state.split[txnId];
+  var t = state.inbox.find(function(x){ return x.txnId===txnId; });
+  if(!sp || !t || !splitReady(t.amount, sp.lines)) return;
+  busyButtons(true);
+  run('apiApprove', { txnId:txnId,
+    splits: sp.lines.map(function(l){ return {envelopeId:l.envelopeId, amount:splitAmt(t.amount, l.amount)}; }) })
+    .then(afterApprove(txnId)).catch(approveErr);
+}
+function afterApprove(txnId){
+  return function(r){
+    toast(tillerNote('Approved ✓', r));
+    state.inbox = state.inbox.filter(function(x){ return x.txnId!==txnId; });
+    delete state.sel[txnId]; delete state.split[txnId];
+    invalidateData();
+    updateBadges(state.inbox.length);
+    refreshBoot();
+    drawInbox();
+  };
+}
+function approveErr(e){ toast('⚠ '+(e.message||e)); drawInbox(); }
+function busyButtons(b){ $all('.txncard .btn').forEach(function(x){ x.disabled=b; }); }
+
+/* Enter approves the first card with a selection/suggestion */
+document.addEventListener('keydown', function(ev){
+  if(ev.key!=='Enter' || state.view!=='inbox' || !state.inbox || !state.inbox.length) return;
+  if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+  var t = state.inbox[0];
+  if(state.split[t.txnId] && state.split[t.txnId].on) approveSplit(t.txnId);
+  else if(state.sel[t.txnId] || t.suggestedId) approve(t.txnId);
+});
+/* ============================ fund view (v3.6.9: pool-driven) ============================
+ * Income is approved into the Income Cash Pool like any other transaction;
+ * this view moves pool money into envelopes ("put the money to work"). */
+function renderFund(){
+  $('#shell').innerHTML = '<h2 class="viewtitle">Fund</h2><div class="spin"></div>';
+  Promise.all([
+    state.plans ? Promise.resolve(state.plans) : run('apiPlans'),
+    state.inbox ? Promise.resolve(state.inbox) : run('apiGetInbox')
+  ]).then(function(res){
+    state.plans = res[0]; state.inbox = res[1];
+    updateBadges(state.inbox.length);
+    drawFund();
+  }).catch(fail);
+}
+function poolBalance(){
+  var b = state.boot, bal = 0;
+  b.groups.forEach(function(g){ g.envelopes.forEach(function(e){
+    if(e.id===b.incomePoolId) bal = e.balance;
+  });});
+  return bal;
+}
+function drawFund(){
+  var bal = poolBalance();
+  var deposits = (state.inbox||[]).filter(function(t){ return t.amount>0 && t.cashAccount===true; });
+  var activePlans = (state.plans||[]).filter(function(p){ return p.active && !isPlanVersion(p); });
+  var f = state.fund['pool'];
+  var h = '<h2 class="viewtitle">Fund</h2>';
+  h += '<div class="txncard"><div class="top"><div class="desc">Income Cash Pool</div>'+
+    '<div class="amt'+(bal>0?' pos':'')+'">'+money(bal)+'</div></div>'+
+    '<div class="meta">money waiting to be put to work</div>';
+  if(deposits.length){
+    h += '<div class="meta" style="margin-top:4px">⚠ '+deposits.length+' deposit'+
+      (deposits.length===1?'':'s')+' waiting in the Inbox — approve into an income envelope, then move it here to the pool.</div>';
+  }
+  if(bal<=0){
+    h += '</div><div class="empty">Nothing to fund yet. Approve deposits into the pool, then put the money to work below.</div>';
+  } else {
+    h += '<div class="formrow" style="margin-top:12px"><label>Amount to fund</label>'+
+      '<input type="number" step="0.01" inputmode="decimal" id="fundAmt" value="'+esc(f?f.amount:bal)+'"></div>';
+    h += '<div class="pills">';
+    activePlans.forEach(function(p){
+      h += '<button class="pill'+(f&&f.planId===p.planId?' sel':'')+
+        '" data-act="fund-plan" data-arg="pool|'+esc(p.planId)+'">'+esc(p.name)+'</button>';
+    });
+    h += '<button class="pill'+(f&&!f.planId?' sel':'')+'" data-act="fund-manual" data-arg="pool">Manual split</button></div>';
+    if(f){
+      h += splitEditorHtml('pool', f.amount, f.legs, 'fund');
+      h += '<div class="actions">'+
+        '<button class="btn" '+(splitReady(f.amount, f.legs)?'':'disabled')+
+        ' data-act="fund-go" data-arg="pool">Fund '+money(f.amount)+'</button>'+
+        '<button class="btn ghost" data-act="fund-cancel" data-arg="pool">Cancel</button></div>';
+    }
+    h += '</div>';
+    if(!activePlans.length){
+      h += '<div class="empty">Tip: create a funding plan below to make this one tap.</div>';
+    }
+  }
+  // Plans live on this same page now (no separate Funding plans tab).
+  h += plansSection();
+  $('#shell').innerHTML = h;
+}
+function fundStart(key, planId){
+  var amtEl = $('#fundAmt');
+  var amount = Number(amtEl && amtEl.value) || poolBalance();
+  if(!(amount>0)){ toast('Enter a positive amount'); return; }
+  if(planId){
+    run('apiPreviewPlan', planId, amount).then(function(p){
+      state.fund['pool'] = { amount: amount, planId: planId,
+        legs: p.legs.map(function(l){ return {envelopeId:l.envelopeId, amount:l.amount}; }) };
+      if(p.leftover) toast('Plan leaves '+money(p.leftover)+' unassigned — adjust below');
+      drawFund();
+    }).catch(function(e){ toast('⚠ '+(e.message||e)); });
+  } else {
+    state.fund['pool'] = { amount: amount, planId:'', legs:[{envelopeId:'', amount:''}] };
+    drawFund();
+  }
+}
+function fundGo(){
+  var f = state.fund['pool'];
+  if(!f || !splitReady(f.amount, f.legs)) return;
+  busyButtons(true);
+  run('apiFundFromPool', { amount: Number(f.amount), planId: f.planId||null,
+    legs: f.legs.map(function(l){ return {envelopeId:l.envelopeId, amount:splitAmt(f.amount, l.amount)}; }) })
+  .then(function(){
+    toast('Funded ✓');
+    delete state.fund['pool'];
+    invalidateData();
+    return refreshBoot();
+  }).then(function(){ if(state.view==='fund') drawFund(); })
+  .catch(function(e){ toast('⚠ '+(e.message||e)); drawFund(); });
+}
+
+/* ============================ plans ============================ */
+/* Legacy 'plans' route → the Fund page (plans now live there). */
+function renderPlans(){ go('fund'); }
+function isPlanVersion(p){ return String(p.planId||'').indexOf('fpv-')===0; }
+function planTotal(p){
+  var sum=0, hasFixed=false;
+  p.lines.forEach(function(l){ if(!l.remainder && l.fixed){ sum+=Number(l.fixed); hasFixed=true; } });
+  return hasFixed ? sum : null;
+}
+function planLinesHtml(p){
+  var h='<div class="planlines">';
+  p.lines.forEach(function(l){
+    var v = l.remainder ? 'remainder' : (l.fixed ? money(l.fixed) : (l.percent ? l.percent+'%' : '—'));
+    h += '<div class="pl"><span>'+esc(l.envelopeName)+'</span><span class="v">'+v+'</span></div>';
+  });
+  return h+'</div>';
+}
+/* Plans management block — rendered inside the Fund page (collapsible). */
+function plansSection(){
+  state.planOpen = state.planOpen || {};
+  var current = (state.plans||[]).filter(function(p){ return !isPlanVersion(p); });
+  var versions = (state.plans||[]).filter(isPlanVersion);
+  var open = !!state.plansOpen || !!state.planEdit;
+  var h = '<div class="plansec"><div class="sechead phead" data-act="plans-section">'+
+    '<span class="chev">'+(open?'▾':'▸')+'</span>'+
+    '<h3 class="sectitle">My plans'+(current.length?' ('+current.length+')':'')+'</h3>'+
+    '<span class="grow"></span>'+
+    '<button class="btn sm ghost" data-act="plan-tiller">↓ From Tiller</button>'+
+    '<button class="btn sm" data-act="plan-new">+ New plan</button></div>';
+  if(!open) return h + '</div>';
+  if(state.planEdit){ h += planFormHtml(); }
+  if(!current.length && !state.planEdit){
+    h += '<div class="empty">No plans yet. A plan is a saved recipe for splitting a paycheck across envelopes.</div>';
+  }
+  current.forEach(function(p){
+    var open = !!state.planOpen[p.planId];
+    var tot = planTotal(p);
+    h += '<div class="plancard'+(p.active?'':' inactive')+'">'+
+      '<div class="top phead" data-act="plan-open" data-arg="'+esc(p.planId)+'">'+
+      '<span class="chev">'+(open?'▾':'▸')+'</span>'+
+      '<span class="nm">'+esc(p.name)+(p.active?'':' (inactive)')+'</span>'+
+      '<span class="mode">'+(tot!=null?money(tot):esc(p.mode))+'</span></div>';
+    if(open){
+      if(p.incomeMatch) h += '<div class="meta" style="color:var(--ink-3);font-size:12.5px;margin-top:3px">matches: '+esc(p.incomeMatch)+'</div>';
+      h += planLinesHtml(p);
+      h += '<div class="reglinks">'+
+        '<button data-act="plan-edit" data-arg="'+esc(p.planId)+'">Edit</button>'+
+        '<button data-act="plan-dup" data-arg="'+esc(p.planId)+'">Duplicate</button>'+
+        (p.active
+          ? '<button class="warn" data-act="plan-off" data-arg="'+esc(p.planId)+'">Deactivate</button>'
+          : '<button data-act="plan-on" data-arg="'+esc(p.planId)+'">Reactivate</button>')+
+        '</div>';
+    }
+    h += '</div>';
+  });
+  if(versions.length){
+    var vo = !!state.showVersions;
+    h += '<div class="versblock"><div class="top phead" data-act="plan-versions" style="margin-top:14px">'+
+      '<span class="chev">'+(vo?'▾':'▸')+'</span>'+
+      '<span class="nm" style="color:var(--ink-3)">Previous versions ('+versions.length+')</span></div>';
+    if(vo){
+      versions.slice().reverse().forEach(function(p){
+        var open = !!state.planOpen[p.planId];
+        var tot = planTotal(p);
+        h += '<div class="plancard inactive" style="margin-left:6px">'+
+          '<div class="top phead" data-act="plan-open" data-arg="'+esc(p.planId)+'">'+
+          '<span class="chev">'+(open?'▾':'▸')+'</span>'+
+          '<span class="nm" style="font-size:13px">'+esc(p.name)+'</span>'+
+          '<span class="mode">'+(tot!=null?money(tot):esc(p.mode))+'</span></div>';
+        if(open){
+          h += planLinesHtml(p);
+          h += '<div class="reglinks"><button data-act="plan-restore" data-arg="'+esc(p.planId)+'">Restore as new plan</button></div>';
+        }
+        h += '</div>';
+      });
+    }
+    h += '</div>';
+  }
+  return h + '</div>';
+}
+/* Plans now live on the Fund page; these delegate so existing handlers work. */
+function drawPlans(){ if(state.view==='fund'||state.view==='plans') drawFund(); }
+function refreshPlansView(){
+  run('apiPlans').then(function(plans){
+    state.plans = plans;
+    if(state.view==='fund'||state.view==='plans') drawFund();
+  }).catch(function(){});
+}
+function planFormHtml(){
+  var pe = state.planEdit;
+  var h = '<div class="plancard plform"><div class="top"><span class="nm">'+
+    (pe.planId?'Edit plan':'New plan')+'</span></div>'+
+    '<div class="formrow" style="margin-top:10px"><label>Name</label>'+
+    '<input type="text" id="pfName" value="'+esc(pe.name)+'" placeholder="Paycheck 1 (1st–15th)"></div>'+
+    '<div class="formrow"><label>Mode</label><select id="pfMode">'+
+    ['fixed','percent','mixed'].map(function(m){
+      return '<option value="'+m+'"'+(pe.mode===m?' selected':'')+'>'+m+'</option>';
+    }).join('')+'</select></div>'+
+    '<div class="formrow"><label>Income match (optional — text in the deposit description)</label>'+
+    '<input type="text" id="pfMatch" value="'+esc(pe.incomeMatch)+'" placeholder="AUBUCHON DIRECT DEP"></div>'+
+    '<div class="formrow"><label>Lines (fixed $, percent %, or remainder)</label>';
+  pe.lines.forEach(function(l,i){
+    h += '<div class="splitline">'+
+      '<button class="envbtn'+(l.envelopeId?'':' unset')+'" data-act="open-picker" data-arg="planline|x|'+i+'">'+
+      (l.envelopeId?esc(envName(l.envelopeId)):'Pick envelope…')+'</button>'+
+      '<input type="number" step="0.01" placeholder="$" value="'+(l.fixed||'')+
+        '" data-act="plan-fixed" data-arg="'+i+'"'+(l.remainder?' disabled':'')+'>'+
+      '<input type="number" step="0.1" class="pct" placeholder="%" value="'+(l.percent||'')+
+        '" data-act="plan-pct" data-arg="'+i+'"'+(l.remainder?' disabled':'')+'>'+
+      '<label class="remchk"><input type="checkbox" data-act="plan-rem" data-arg="'+i+'"'+
+        (l.remainder?' checked':'')+'> rest</label>'+
+      '<button class="rm" data-act="plan-rm" data-arg="'+i+'">✕</button></div>';
+  });
+  h += '<button class="addline" data-act="plan-add">+ Add line</button></div>'+
+    '<div class="actions">'+
+    '<button class="btn" data-act="plan-save">Save plan</button>'+
+    '<button class="btn ghost" data-act="plan-cancel">Cancel</button></div></div>';
+  return h;
+}
+function planFormCapture(){
+  var pe = state.planEdit;
+  if($('#pfName')) pe.name = $('#pfName').value;
+  if($('#pfMode')) pe.mode = $('#pfMode').value;
+  if($('#pfMatch')) pe.incomeMatch = $('#pfMatch').value;
+}
+function planSave(){
+  planFormCapture();
+  var pe = state.planEdit;
+  if(!pe.name){ toast('Plan needs a name'); return; }
+  var lines = pe.lines.filter(function(l){ return l.envelopeId; });
+  if(!lines.length){ toast('Add at least one line'); return; }
+  // Immediate feedback — the save is a server round-trip and can take a few
+  // seconds; without this the button looks dead.
+  var btn = document.querySelector('[data-act="plan-save"]');
+  var cancel = document.querySelector('[data-act="plan-cancel"]');
+  if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+  if(cancel){ cancel.disabled = true; }
+  var isEdit = !!pe.planId;
+  run('apiSavePlan', { planId:pe.planId||'', name:pe.name, mode:pe.mode,
+    incomeMatch:pe.incomeMatch, active:pe.active!==false,
+    lines: lines.map(function(l){ return { envelopeId:l.envelopeId,
+      fixed:l.remainder?0:Number(l.fixed||0), percent:l.remainder?0:Number(l.percent||0),
+      remainder:!!l.remainder }; }) }, { version: isEdit })
+  .then(function(){
+    toast(isEdit ? 'Plan saved ✓ (previous version kept)' : 'Plan saved ✓');
+    if(pe.planId) state.planOpen[pe.planId] = true;
+    state.planEdit = null;
+    state.plansOpen = true;
+    state.plans = null;
+    refreshPlansView();
+  }).catch(function(e){
+    if(btn){ btn.disabled = false; btn.textContent = 'Save plan'; }
+    if(cancel){ cancel.disabled = false; }
+    toast('⚠ '+(e.message||e));
+  });
+}
+function planFromTiller(){
+  confirmUi('Build a funding plan from this month’s Tiller category targets? '+
+    'Each budgeted expense category becomes a fixed line. Re-running updates that month’s plan.',
+    'Build plan').then(function(ok){
+      if(!ok) return;
+      toast('Reading Tiller targets…');
+      run('apiPlanFromTiller', {}).then(function(r){
+        var msg = 'Built “'+r.name+'” — '+r.lineCount+' envelopes, '+money(r.total);
+        if(!r.balanced) msg += ' (income target '+money(r.expectedIncome)+')';
+        toast(msg+' ✓');
+        if(r.skipped && r.skipped.length){
+          toast('Skipped '+r.skipped.length+': '+r.skipped.map(function(s){return s.name;}).join(', '));
+        }
+        state.plansOpen = true;
+        state.plans = null;
+        refreshPlansView();
+      }).catch(function(e){ toast('⚠ '+(e.message||e)); });
+    });
+}
+function planToggle(planId, on){
+  var p = state.plans.find(function(x){return x.planId===planId;});
+  if(!p) return;
+  run('apiSavePlan', { planId:p.planId, name:p.name, mode:p.mode, incomeMatch:p.incomeMatch,
+    active:on, lines:p.lines.map(function(l){ return {envelopeId:l.envelopeId, fixed:l.fixed,
+      percent:l.percent, remainder:l.remainder}; }) })
+  .then(function(){ toast(on?'Plan reactivated':'Plan deactivated'); state.plans=null; refreshPlansView(); })
+  .catch(function(e){ toast('⚠ '+(e.message||e)); });
+}
+
+/* ============================ transactions ============================ */
+function renderTxns(){
+  var r = state.register;
+  var sig = r.q+'|'+r.account+'|'+r.envelope+'|'+(r.includeHidden?'1':'0');
+  var cached = r.items && r.sig===sig;
+  if(cached){ drawTxns(); }
+  else { $('#shell').innerHTML = '<h2 class="viewtitle">Transactions</h2><div class="spin"></div>'; }
+  Promise.all([
+    run('apiRegister', { q:r.q, account:r.account, envelope:r.envelope,
+      includeHidden:r.includeHidden, limit:50 }),
+    state.accounts ? Promise.resolve(state.accounts) : run('apiAccounts')
+  ]).then(function(res){
+    var changed = JSON.stringify(res[0]) !== JSON.stringify(r.items);
+    r.items = res[0]; r.sig = sig;
+    state.accounts = res[1];
+    if(state.view==='txns' && (!cached || (changed && !userBusy()))) drawTxns();
+  }).catch(function(e){ if(!cached) fail(e); });
+}
+function drawTxns(){
+  var r = state.register;
+  var h = '<h2 class="viewtitle">Transactions</h2>'+
+    '<div class="searchbar"><input id="regQ" placeholder="Search description…" value="'+esc(r.q)+'">'+
+    '<button class="btn sm" data-act="reg-search">Search</button></div>'+
+    '<div class="filterbar">'+
+    '<select id="regAcct" data-act="reg-acct"><option value="">All accounts</option>'+
+    (state.accounts||[]).map(function(a){
+      return '<option value="'+esc(a)+'"'+(r.account===a?' selected':'')+'>'+esc(a)+'</option>';
+    }).join('')+'</select>'+
+    (r.envelope
+      ? '<button class="pill sel" data-act="reg-env-clear">'+esc(envName(r.envelope))+' ✕</button>'
+      : '<button class="pill" data-act="open-picker" data-arg="regenv|x|0">Filter by envelope…</button>')+
+    '<button class="pill'+(r.includeHidden?' sel':'')+'" data-act="reg-hidden">'+
+      (r.includeHidden?'Hidden shown ✕':'Show hidden')+'</button>'+
+    ((r.q||r.account||r.envelope)?'<button class="pill" data-act="reg-clear">Clear all</button>':'')+
+    '</div>';
+  var items = r.items || [];
+  if(!items.length){
+    h += '<div class="empty">'+((r.q||r.account||r.envelope)?'No matches.':'No approved transactions yet.')+'</div>';
+  } else {
+    h += '<div class="card">';
+    items.forEach(function(t,i){
+      h += '<div class="regrow"><div class="l1"><span class="desc">'+esc(t.description)+'</span>'+
+        '<span class="amt'+(t.amount>0?' pos':'')+'">'+money(t.amount)+'</span></div>'+
+        '<div class="meta">'+esc(t.date)+' · <span class="acctchip">'+esc(t.account)+'</span></div>'+
+        '<div class="legchips">'+t.legs.map(function(l){
+          return '<span class="legchip">'+esc(l.envelopeName)+(t.legs.length>1?' '+money(l.amount):'')+'</span>';
+        }).join('')+'</div>';
+      if(state.resplit[t.txnId]){
+        h += splitEditorHtml(t.txnId, t.amount, state.resplit[t.txnId], 'resplit');
+        h += '<div class="actions" style="margin-top:10px">'+
+          '<button class="btn sm" '+(splitReady(t.amount, state.resplit[t.txnId])?'':'disabled')+
+          ' data-act="resplit-go" data-arg="'+esc(t.txnId)+'">Save split</button>'+
+          '<button class="btn ghost sm" data-act="resplit-cancel" data-arg="'+esc(t.txnId)+'">Cancel</button></div>';
+      } else {
+        h += '<div class="reglinks">'+
+          '<button data-act="resplit-on" data-arg="'+esc(t.txnId)+'">'+
+            (t.legs.length>1?'Edit split':'Split / move')+'</button>'+
+          '<button class="warn" data-act="unapprove" data-arg="'+esc(t.txnId)+'">Un-approve</button></div>';
+      }
+      h += '</div>';
+    });
+    h += '</div>';
+  }
+  $('#shell').innerHTML = h;
+  var q = $('#regQ');
+  if(q) q.addEventListener('keydown', function(ev){
+    if(ev.key==='Enter'){ state.register.q=q.value; renderTxns(); }
+  });
+}
+function resplitGo(txnId){
+  var lines = state.resplit[txnId];
+  var t = (state.register.items||[]).find(function(x){ return x.txnId===txnId; });
+  var total = t ? t.amount : 0; // 0 → splitAmt keeps positive (won't flip sign)
+  run('apiResplit', { txnId:txnId,
+    splits: lines.map(function(l){ return {envelopeId:l.envelopeId, amount:splitAmt(total, l.amount)}; }) })
+  .then(function(){
+    toast('Split saved ✓');
+    delete state.resplit[txnId];
+    invalidateData();
+    refreshBoot();
+    renderTxns();
+  }).catch(function(e){ toast('⚠ '+(e.message||e)); });
+}
+function unapprove(txnId){
+  confirmUi('Send this transaction back to the Inbox? Its envelope balance(s) will be restored.', 'Un-approve')
+  .then(function(ok){
+    if(!ok) return;
+    run('apiUnapprove', txnId).then(function(){
+      toast('Back to Inbox ✓');
+      state.inbox = null;
+      invalidateData();
+      refreshBoot();
+      renderTxns();
+    }).catch(function(e){ toast('⚠ '+(e.message||e)); });
+  });
+}
+
+/* ============================ accounts (v3.2) ============================ */
+function renderAccounts(){
+  if(state.accountsFull){ drawAccounts(); }
+  else { $('#shell').innerHTML = '<h2 class="viewtitle">Accounts</h2><div class="spin"></div>'; }
+  run('apiAccountsFull').then(function(res){
+    var changed = JSON.stringify(res) !== JSON.stringify(state.accountsFull);
+    state.accountsFull = res;
+    if(state.view==='accounts' && changed) drawAccounts();
+  }).catch(function(e){ if(!state.accountsFull) fail(e); });
+}
+function drawAccounts(){
+  var rows = (state.accountsFull && state.accountsFull.accounts) || [];
+  var dups = (state.accountsFull && state.accountsFull.dups) || [];
+  var hiddenN = rows.filter(function(a){ return a.hidden; }).length;
+  var h = '<div class="viewhead"><h2>Accounts</h2></div>';
+  if(dups.length){
+    h += '<div class="empty" style="padding:0 4px 10px;text-align:left;font-size:12.5px;color:var(--amber)">'+
+      '⚠ Duplicate rows in your Tiller Accounts tab (first row wins): '+esc(dups.join(', '))+
+      '. Delete the extras in Tiller to avoid surprises.</div>';
+  }
+  if(hiddenN){
+    h += '<div class="empty" style="padding:0 4px 14px;text-align:left;font-size:12.5px">'+
+      hiddenN+' hidden account'+(hiddenN>1?'s':'')+
+      ' — transactions stay in your envelopes, they’re just filtered off the Transactions page.</div>';
+  }
+  if(!rows.length){
+    h += '<div class="empty">No accounts found yet.</div>';
+  } else {
+    h += '<div class="card">';
+    rows.forEach(function(a){
+      var meta = [a.klass, a.group].filter(String).join(' · ');
+      h += '<div class="envrow"'+(a.hidden?' style="opacity:.55"':'')+'><div style="flex:1;min-width:0">'+
+        '<div class="nm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(a.name)+'</div>'+
+        '<div style="color:var(--ink-3);font-size:12px;margin-top:1px">'+
+        esc(meta || '')+(meta?' · ':'')+a.txnCount+' txns'+(a.lastTxn?' · last '+esc(a.lastTxn):'')+
+        (a.tillerHide?' · hidden in Tiller':'')+'</div></div>'+
+        '<button class="btn ghost sm" data-act="acct-toggle" data-arg="'+esc(a.name)+'">'+
+        (a.hidden?'Show':'Hide')+'</button></div>';
+    });
+    h += '</div>';
+  }
+  $('#shell').innerHTML = h;
+}
+function acctToggle(name){
+  var rows = (state.accountsFull && state.accountsFull.accounts) || [];
+  var a = rows.find(function(x){ return x.name===name; });
+  if(!a) return;
+  a.hidden = !a.hidden; // optimistic
+  drawAccounts();
+  run('apiSetAccountHidden', { name:name, hidden:a.hidden })
+  .then(function(){
+    toast(a.hidden ? 'Hidden — won’t show in Transactions' : 'Visible again ✓');
+    state.register.sig = null; // register must refetch with new hidden set
+  }).catch(function(e){
+    a.hidden = !a.hidden;
+    drawAccounts();
+    toast('⚠ '+(e.message||e));
+  });
+}
+
+/* ============================ balances (v3.2) ============================ */
+function renderBalances(){
+  if(state.balances){ drawBalances(); }
+  else { $('#shell').innerHTML = '<h2 class="viewtitle">Balances</h2><div class="spin"></div>'; }
+  run('apiBalances').then(function(b){
+    if(state.balReorder || state.balEdit) return; // don't clobber an in-progress reorder/edit
+    var changed = JSON.stringify(b) !== JSON.stringify(state.balances);
+    state.balances = b;
+    if(state.view==='balances' && changed) drawBalances();
+  }).catch(function(e){ if(!state.balances) fail(e); });
+}
+function balGroupHtml(g){
+  var h = '<div class="card balgrp"><div class="bhead"><span>'+esc(g.name)+'</span>';
+  if(state.balReorder){
+    h += '<span style="display:flex;gap:6px">'+
+      '<button class="btn sm" style="background:rgba(255,255,255,.2);padding:2px 10px" data-act="bal-up" data-arg="'+esc(g.name)+'">↑</button>'+
+      '<button class="btn sm" style="background:rgba(255,255,255,.2);padding:2px 10px" data-act="bal-down" data-arg="'+esc(g.name)+'">↓</button></span>';
+  } else {
+    h += '<span class="v">'+money(g.total)+'</span>';
+  }
+  h += '</div>';
+  if(!state.balReorder){
+    g.rows.forEach(function(r){
+      var stale = r.days >= 30;
+      var slow = r.days >= 7 && r.days < 30;
+      h += '<div class="balrow'+(stale?' stale':'')+'">'+
+        '<span class="nm">'+esc(r.name)+(r.manual?' <span style="font-size:10px;opacity:.55">manual</span>':'')+'</span>'+
+        (r.manual?'<button class="baledit" data-act="bal-edit" data-arg="'+esc(r.name)+'" title="Update balance">✎</button>':'')+
+        '<span class="upd'+(slow||stale?' stale':'')+'">'+esc(r.updated)+'</span>'+
+        '<span class="bal">'+money(r.balance)+'</span>'+
+        '</div>';
+      if(state.balEdit===r.name){
+        h += '<div class="balrow" style="gap:8px">'+
+          '<input id="balEditInput" class="amt" style="flex:1" inputmode="decimal" value="'+esc(r.balance)+'">'+
+          '<button class="btn sm" data-act="bal-edit-save" data-arg="'+esc(r.name)+'">Save</button>'+
+          '<button class="btn ghost sm" data-act="bal-edit-cancel">Cancel</button></div>';
+      }
+    });
+  } else {
+    // reorder mode: list accounts with up/down so they can be ordered within the group
+    g.rows.forEach(function(r){
+      h += '<div class="balrow">'+
+        '<span class="nm">'+esc(r.name)+'</span>'+
+        '<span style="display:flex;gap:6px">'+
+        '<button class="btn sm" style="background:rgba(13,148,136,.12);padding:2px 9px" data-act="bal-acct-up" data-arg="'+esc(g.name)+'|'+esc(r.name)+'">↑</button>'+
+        '<button class="btn sm" style="background:rgba(13,148,136,.12);padding:2px 9px" data-act="bal-acct-down" data-arg="'+esc(g.name)+'|'+esc(r.name)+'">↓</button>'+
+        '</span></div>';
+    });
+  }
+  return h+'</div>';
+}
+function balMove(name, dir){
+  var gs = state.balances.groups;
+  var i = -1;
+  gs.forEach(function(g,idx){ if(g.name===name) i=idx; });
+  if(i===-1) return;
+  // move among groups in the SAME column (asset vs liability)
+  var sibs = [];
+  gs.forEach(function(g,idx){ if(g.liability===gs[i].liability) sibs.push(idx); });
+  var pos = sibs.indexOf(i);
+  var tgt = pos + dir;
+  if(tgt<0 || tgt>=sibs.length) return;
+  var j = sibs[tgt];
+  var tmp = gs[i]; gs[i]=gs[j]; gs[j]=tmp;
+  drawBalances();
+}
+function balMoveAccount(groupName, acctName, dir){
+  var g = (state.balances.groups||[]).find(function(x){ return x.name===groupName; });
+  if(!g) return;
+  var i = -1;
+  g.rows.forEach(function(r,idx){ if(r.name===acctName) i=idx; });
+  var j = i + dir;
+  if(i===-1 || j<0 || j>=g.rows.length) return;
+  var tmp = g.rows[i]; g.rows[i]=g.rows[j]; g.rows[j]=tmp;
+  drawBalances();
+}
+function balSaveOrder(){
+  var names = state.balances.groups.map(function(g){ return g.name; });
+  var accts = [];
+  state.balances.groups.forEach(function(g){ (g.rows||[]).forEach(function(r){ accts.push(r.name); }); });
+  run('apiSetBalanceGroupOrder', names)
+    .then(function(){ return run('apiSetBalanceAccountOrder', accts); })
+    .then(function(){ toast('Order saved ✓'); })
+    .catch(function(e){ toast('⚠ '+(e.message||e)); });
+}
+function balEdit(account){ state.balEdit = account; drawBalances();
+  var el=$('#balEditInput'); if(el){ el.focus(); el.select(); } }
+function balEditCancel(){ state.balEdit = null; drawBalances(); }
+function balEditSave(account){
+  var el=$('#balEditInput'); if(!el) return;
+  var v=el.value; if(v===''||isNaN(Number(v))){ toast('Enter a number'); return; }
+  var amt=Number(v);
+  var btn=document.querySelector('[data-act="bal-edit-save"]');
+  if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
+  run('apiManualBalance', { account:account, balance:amt }).then(function(){
+    toast('Balance updated · Tiller ✓');
+    (state.balances.groups||[]).forEach(function(g){ (g.rows||[]).forEach(function(rr){
+      if(rr.name===account){ rr.balance = g.liability?Math.abs(amt):amt; rr.days=0; rr.updated='today'; } }); });
+    state.balEdit=null; state.reconcile=null; invalidateData();
+    drawBalances();
+  }).catch(function(e){ if(btn){ btn.disabled=false; btn.textContent='Save'; } toast('⚠ '+(e.message||e)); });
+}
+function drawBalances(){
+  var b = state.balances;
+  var h = '<div class="viewhead"><h2>Balances</h2>'+
+    '<span style="display:flex;gap:10px;align-items:center">'+
+    '<span style="color:var(--ink-3);font-size:12.5px">'+esc(b.asOf||'')+'</span>'+
+    '<button class="btn ghost sm" data-act="bal-reorder">'+
+    (state.balReorder?'Done':'Reorder')+'</button></span></div>';
+  if(b.dups && b.dups.length && !state.balReorder){
+    h += '<div class="empty" style="padding:0 4px 12px;text-align:left;font-size:12.5px;color:var(--amber)">'+
+      '⚠ Duplicate rows in your Tiller Accounts tab (first row wins): '+esc(b.dups.join(', '))+'</div>';
+  }
+  h += '<div class="nwhero"><span class="lbl">Net worth</span>'+
+    '<span class="num">'+money(b.netWorth)+'</span></div>';
+  var aGroups = b.groups.filter(function(g){ return !g.liability; });
+  var lGroups = b.groups.filter(function(g){ return g.liability; });
+  h += '<div class="balcols"><div>';
+  h += '<div class="balsect"><span>Assets</span><span class="v">'+money(b.assets)+'</span></div>';
+  if(!aGroups.length) h += '<div class="empty">No asset accounts found.</div>';
+  aGroups.forEach(function(g){ h += balGroupHtml(g); });
+  h += '</div><div>';
+  h += '<div class="balsect"><span>Liabilities</span><span class="v">'+money(b.liabilities)+'</span></div>';
+  if(!lGroups.length) h += '<div class="empty">No liability accounts found.</div>';
+  lGroups.forEach(function(g){ h += balGroupHtml(g); });
+  h += '</div></div>';
+  $('#shell').innerHTML = h;
+}
+
+/* ============================ sync (v3.3 Phase A — read-only) ============================ */
+function renderSync(){
+  if(state.sync){ drawSync(); return; }
+  $('#shell').innerHTML = '<h2 class="viewtitle">Tiller sync</h2>'+
+    '<div class="empty" style="padding-top:24px">Comparing SBC with your Tiller sheet…</div><div class="spin"></div>';
+  syncFetch();
+}
+function syncFetch(){
+  run('apiSyncStatus', { days: state.syncDays||90 }).then(function(s){
+    state.sync = s;
+    if(state.view==='sync') drawSync();
+  }).catch(function(e){ if(state.view==='sync') fail(e); });
+}
+function syncSection(title, rows, count, rowFn, okMsg){
+  var h = '<div class="grp"><h3>'+title+(count? ' · '+count : '')+'</h3><div class="card">';
+  if(!count){ h += '<div class="empty" style="padding:18px 16px">'+okMsg+'</div>'; }
+  else {
+    rows.forEach(function(r){ h += rowFn(r); });
+    if(count > rows.length){
+      h += '<div class="empty" style="padding:10px 16px;font-size:12px">…and '+(count-rows.length)+' more</div>';
+    }
+  }
+  return h+'</div></div>';
+}
+function drawSync(){
+  var s = state.sync;
+  var totalIssues = s.counts.bankEdits + s.counts.deleted + s.counts.drift +
+    s.counts.splitOnlyInSBC + s.missingCatsCount;
+  var h = '<div class="viewhead"><h2>Tiller sync</h2>'+
+    '<button class="btn ghost sm" data-act="sync-refresh">↻ Re-check</button></div>'+
+    '<div class="empty" style="padding:0 4px 14px;text-align:left;font-size:12.5px">'+
+    'Nothing changes unless you tap a ✎ Write or ✓ Accept button — every write is audited and undoable. '+
+    'Window: last '+s.days+' days · checked '+s.sbcTxnCount+' approved + '+s.inboxCount+
+    ' inbox transactions · '+esc(s.generatedAt)+'</div>';
+
+  h += '<div class="stats" style="grid-template-columns:1fr 1fr">'+
+    '<div class="stat'+(totalIssues? '':' hero')+'"><div class="lbl">Drift items</div>'+
+    '<div class="num">'+totalIssues+'</div><div class="sub">'+
+    (totalIssues?'review below':'sheets agree ✓')+'</div></div>'+
+    '<div class="stat"><div class="lbl">Ready to backfill</div>'+
+    '<div class="num">'+s.counts.backfill+'</div>'+
+    '<div class="sub">'+(s.counts.backfill>0?'tap ✎ Write below':'Tiller categories all set')+'</div></div></div>';
+
+  h += syncSection('Bank data changed in Tiller', s.bankEdits, s.counts.bankEdits, function(r){
+    return '<div class="regrow"><div class="l1"><span class="desc">'+esc(r.description)+'</span>'+
+      '<span class="acctchip">'+esc(r.where)+'</span></div>'+
+      (r.account?'<div class="meta"><span class="acctchip">'+esc(r.account)+'</span></div>':'')+
+      '<div class="meta">'+esc(r.date)+' · '+esc(r.changes.join(' · '))+'</div>'+
+      (r.hint?'<div class="meta" style="color:var(--amber);font-weight:600">'+esc(r.hint)+'</div>':'')+
+      '<div class="reglinks"><button data-act="accept-tiller" data-arg="'+esc(r.txnId)+'">'+
+      '✓ Accept Tiller’s version</button>'+
+      '<button data-act="inspect-txn" data-arg="'+esc(r.txnId)+'">🔍 Inspect</button></div>'+
+      '</div>';
+  }, 'No amount/description/date changes on transactions SBC already has.');
+
+  h += syncSection('Deleted in Tiller', s.deleted, s.counts.deleted, function(r){
+    return '<div class="regrow"><div class="l1"><span class="desc">'+esc(r.description)+'</span>'+
+      '<span class="amt">'+money(r.amount)+'</span></div>'+
+      '<div class="meta">'+esc(r.date)+(r.account?' · '+esc(r.account):'')+' · still in SBC '+esc(r.where)+'</div></div>';
+  }, 'Every SBC transaction in the window still exists in Tiller.');
+
+  h += syncSection('Category conflicts', s.drift, s.counts.drift, function(r){
+    return '<div class="regrow"><div class="l1"><span class="desc">'+esc(r.description)+'</span>'+
+      '<span class="amt">'+money(r.amount)+'</span></div>'+
+      '<div class="meta">'+esc(r.date)+(r.account?' · '+esc(r.account):'')+'</div>'+
+      '<div class="meta">Tiller says <b>'+esc(r.tillerCategory)+
+      '</b> · SBC says <b>'+esc(r.sbcEnvelope)+'</b></div></div>';
+  }, 'No transactions where Tiller and SBC disagree on category.');
+
+  h += syncSection('Splits not yet mirrored in Tiller', s.splitOnlyInSBC, s.counts.splitOnlyInSBC, function(r){
+    return '<div class="regrow"><div class="l1"><span class="desc">'+esc(r.description)+'</span>'+
+      '<span class="amt">'+money(r.amount)+'</span></div>'+
+      '<div class="meta">'+esc(r.date)+(r.account?' · '+esc(r.account):'')+' · SBC: '+esc(r.sbcSplits)+' · Tiller: '+
+      r.tillerRows+' row'+(r.tillerRows>1?'s':'')+' ('+esc(r.tillerCategory)+')</div></div>';
+  }, 'No SBC splits waiting to be mirrored.');
+
+  h += syncSection('Ready to backfill (Tiller category blank)', s.backfill, s.counts.backfill, function(r){
+    return '<div class="regrow"><div class="l1"><span class="desc">'+esc(r.description)+'</span>'+
+      '<span class="amt">'+money(r.amount)+'</span></div>'+
+      '<div class="meta">'+esc(r.date)+(r.account?' · '+esc(r.account):'')+' · will write: <b>'+esc(r.envelope)+'</b></div></div>';
+  }, 'Nothing waiting for category backfill.');
+  if(s.counts.backfill>0){
+    h += '<div class="actions" style="margin:-8px 4px 18px">'+
+      '<button class="btn sm" data-act="backfill-go">✎ Write '+s.counts.backfill+
+      ' categor'+(s.counts.backfill===1?'y':'ies')+' to Tiller</button>'+
+      '<span style="color:var(--ink-3);font-size:12px">blank cells only · undoable from History</span></div>';
+  }
+
+  if(s.tillerDupIds !== undefined){
+    var dupAll = s.tillerDupIds;
+    var dupShown = state.showAllDups ? dupAll : dupAll.filter(function(r){ return r.complete===false; });
+    var okN = dupAll.filter(function(r){ return r.complete!==false; }).length;
+    var dupTitle = 'Shared Transaction IDs in Tiller (all-time)'+
+      (s.tillerDupIdsIncomplete!==undefined?' — '+s.tillerDupIdsIncomplete+' need attention':'');
+    h += syncSection(dupTitle, dupShown,
+      state.showAllDups ? s.tillerDupIdsCount : (s.tillerDupIdsIncomplete||0), function(r){
+      var verdict;
+      if(r.complete===true){
+        verdict = '<div class="meta" style="color:var(--green);font-weight:600">✓ All '+r.count+
+          ' rows are in SBC ('+money(r.sbcTotal)+') — no action. Just never reuse this ID for new entries.</div>';
+      } else if(r.complete===false){
+        verdict = '<div class="meta" style="color:var(--amber);font-weight:600">⚠ Tiller has '+r.count+
+          ' rows ('+money(r.total)+'), SBC has '+r.sbcRows+' ('+money(r.sbcTotal)+')'+
+          (r.inInbox?' + 1 in Inbox':'')+
+          '. Fix the missing Tiller rows: unique Transaction ID + today’s Date Added, then Check for new.</div>';
+      } else {
+        verdict = '<div class="meta" style="color:var(--amber);font-weight:600">'+
+          'Give each Tiller row its own unique Transaction ID + today’s Date Added, then Check for new.</div>';
+      }
+      return '<div class="regrow"><div class="l1"><span class="desc">'+esc(r.description)+'</span>'+
+        '<span class="amt">'+money(r.total)+' total</span></div>'+
+        (r.account?'<div class="meta"><span class="acctchip">'+esc(r.account)+'</span></div>':'')+
+        '<div class="meta">'+r.count+' rows share this ID: '+
+        r.rows.map(function(x){ return esc(x.date)+' '+money(x.amount); }).join(' · ')+'</div>'+
+        verdict+'</div>';
+    }, state.showAllDups
+        ? 'Every Transaction ID in Tiller is unique. (Copy-pasted manual rows would show here.)'
+        : 'None need attention — all '+s.tillerDupIdsCount+' shared-ID clusters are fully in SBC ✓');
+    if(okN>0){
+      h += '<div class="actions" style="margin:-8px 4px 18px">'+
+        '<button class="btn ghost sm" data-act="sync-dups-toggle">'+
+        (state.showAllDups ? 'Hide the healthy clusters' : 'Show all '+s.tillerDupIdsCount+' clusters (incl. ✓ healthy)')+
+        '</button></div>';
+    }
+  }
+
+  if(s.catTabFound){
+    h += syncSection('Envelopes missing from Tiller Categories', s.missingCats, s.missingCatsCount, function(r){
+      return '<div class="regrow"><div class="l1"><span class="desc">'+esc(r.name)+'</span>'+
+        '<span class="acctchip">'+esc(r.group||'')+'</span></div></div>';
+    }, 'Every SBC envelope exists as a Tiller category.');
+  } else {
+    h += '<div class="empty">No "Categories" tab found in the Tiller sheet — skipped that check.</div>';
+  }
+
+  h += '<div class="empty" style="font-size:12.5px;padding-top:8px">Coming next: manual entries for '+
+    'feed-less accounts, auto-categorize at approval, split mirroring, conflict resolver, and '+
+    'Categories-tab upserts — all behind the Write Authorization gate.</div>';
+  $('#shell').innerHTML = h;
+}
+
+/* v3.5: write SBC envelope names into BLANK Tiller Category cells. */
+function backfillGo(){
+  var n = state.sync && state.sync.counts ? state.sync.counts.backfill : 0;
+  confirmUi('Write '+n+' categor'+(n===1?'y':'ies')+' into Tiller?\n\n'+
+    'Only BLANK Category cells are filled — existing categories are never touched. '+
+    'Undoable from History.', 'Write to Tiller')
+  .then(function(ok){
+    if(!ok) return;
+    toast('Writing to Tiller…');
+    run('apiBackfillCategories', {days:90}).then(function(r){
+      toast(r.written>0 ? 'Wrote '+r.written+' categor'+(r.written===1?'y':'ies')+' to Tiller ✓'
+                        : (r.note||'Nothing to write'));
+      state.sync = null;
+      if(state.view==='sync') renderSync();
+    }).catch(function(e){ toast('⚠ '+(e.message||e)); });
+  });
+}
+
+/* v3.4 forensics: everything the system knows about one transaction. */
+function inspectTxn(txnId){
+  toast('Inspecting…');
+  run('apiInspectTxn', txnId).then(function(d){
+    var h = '<div class="ovl" data-act="inspect-close"><div class="panel" data-stop="1" '+
+      'style="max-height:84vh"><div style="overflow:auto;font-size:13px;line-height:1.6">'+
+      '<div style="font-weight:800;font-size:15px;margin-bottom:6px">Transaction forensics</div>'+
+      '<div style="color:var(--ink-3);font-size:11px;word-break:break-all;margin-bottom:10px">'+esc(d.txnId)+'</div>';
+    h += '<div style="font-weight:700;margin-top:8px">SBC register · '+d.register.length+' row'+(d.register.length!==1?'s':'')+'</div>';
+    if(!d.register.length) h += '<div style="color:var(--ink-3)">none</div>';
+    d.register.forEach(function(r){
+      h += '<div style="border-left:3px solid '+(r.approvedBy==='migration'?'var(--amber)':'var(--teal-500)')+
+        ';padding-left:8px;margin:6px 0">'+
+        esc(r.date)+' · '+money(r.amount)+' → '+esc(r.envelope)+'<br>'+
+        '<span style="color:var(--ink-3)">sheet row '+r.sheetRow+' · by <b>'+esc(r.approvedBy)+'</b>'+
+        (r.approvedAt?' at '+esc(r.approvedAt):'')+(r.note?' · '+esc(r.note):'')+'</span></div>';
+    });
+    h += '<div style="font-weight:700;margin-top:8px">Inbox</div>'+
+      '<div style="color:var(--ink-3)">'+(d.inbox?esc(d.inbox.description)+' · '+money(d.inbox.amount):'not in inbox')+'</div>';
+    h += '<div style="font-weight:700;margin-top:8px">Dedupe index (_Index)</div>'+
+      '<div style="color:var(--ink-3)">'+(d.indexSeenAt?'remembered '+esc(d.indexSeenAt):'⚠ NOT in the dedupe index')+'</div>';
+    h += '<div style="font-weight:700;margin-top:8px">Tiller today · '+d.tiller.length+' row'+(d.tiller.length!==1?'s':'')+'</div>';
+    d.tiller.forEach(function(t){
+      h += '<div style="color:var(--ink-3)">'+esc(t.date)+' · '+money(t.amount)+' · '+esc(t.description)+
+        (t.dateAdded?' · added '+esc(t.dateAdded):'')+'</div>';
+    });
+    h += '<div style="font-weight:700;margin-top:8px">Audit trail · '+d.audit.length+' op'+(d.audit.length!==1?'s':'')+'</div>';
+    if(!d.audit.length) h += '<div style="color:var(--ink-3)">no audit ops reference this txn</div>';
+    d.audit.forEach(function(a){
+      h += '<div style="margin:5px 0"><b>'+esc(a.action)+'</b> · '+esc(a.timestamp)+' · '+esc(a.opId)+
+        '<br><span style="color:var(--ink-3)">'+esc(a.note)+'</span></div>';
+    });
+    h += '</div><div class="actions" style="justify-content:flex-end;margin-top:10px">'+
+      '<button class="btn ghost" data-act="inspect-close">Close</button></div></div></div>';
+    $('#ovl').innerHTML = h;
+  }).catch(function(e){ toast('⚠ '+(e.message||e)); });
+}
+
+/* v3.4: make SBC's copy of one transaction match Tiller's bank data.
+   Envelope assignment is kept; balance adjusts by the difference; undoable
+   from History. Writes only to the companion sheet. */
+function acceptTiller(txnId){
+  var item = ((state.sync&&state.sync.bankEdits)||[]).find(function(x){ return x.txnId===txnId; });
+  var what = item ? '"'+item.description+'"\n'+item.changes.join('\n') : txnId;
+  confirmUi('Update SBC to match Tiller?\n\n'+what+'\n\nEnvelope assignment is kept; undoable from History.', 'Accept')
+  .then(function(ok){
+    if(!ok) return;
+    run('apiAcceptTillerTxn', txnId).then(function(){
+      toast('SBC updated to match Tiller ✓');
+      invalidateData();
+      state.inbox = null;
+      refreshBoot();
+      state.sync = null;
+      if(state.view==='sync') renderSync();
+    }).catch(function(e){ toast('⚠ '+(e.message||e)); });
+  });
+}
+
+/* ============================ import (v3.2) ============================ */
+function importNowUi(){
+  if(state.importing) return;
+  state.importing = true;
+  toast('Checking Tiller for new transactions…');
+  $all('[data-act="import-now"]').forEach(function(b){ b.disabled = true; });
+  run('apiImportNow').then(function(r){
+    state.importing = false;
+    toast(r.newCount > 0
+      ? r.newCount+' new transaction'+(r.newCount>1?'s':'')+' → Inbox ✓'
+      : 'No new transactions in Tiller');
+    state.inbox = null;
+    updateBadges(r.inboxCount);
+    refreshBoot();
+    if(state.view==='inbox') renderInbox();
+  }).catch(function(e){
+    state.importing = false;
+    $all('[data-act="import-now"]').forEach(function(b){ b.disabled = false; });
+    toast('⚠ '+(e.message||e));
+  });
+}
+
+/* ============================ more (phone) ============================ */
+function settingsSectionLabel(t){
+  return '<div style="color:var(--ink-3);font-size:11px;font-weight:700;letter-spacing:.08em;margin:14px 2px 6px">'+t+'</div>';
+}
+function settingsList(rows){
+  var h = '<div class="card morelist">';
+  rows.forEach(function(r){
+    h += '<div class="envrow" data-act="goview" data-arg="'+r[0]+'"><span class="nm">'+r[1]+'</span><span>›</span></div>';
+  });
+  return h+'</div>';
+}
+function renderSettings(){
+  var desktop = window.innerWidth >= 900;
+  var h = '<h2 class="viewtitle">Settings</h2>';
+  // On phones the sidebar is hidden, so surface the Money pages here too.
+  // On desktop they live in the sidebar's Money group, so we don't repeat them.
+  if(!desktop){
+    h += settingsSectionLabel('MONEY')+settingsList([
+      ['txns','Transactions'],['balances','Balances'],['accounts','Accounts']]);
+    h += settingsSectionLabel('SETTINGS');
+  }
+  h += settingsList([['sync','Tiller sync'],['reconcile','Reconcile accounts'],
+    ['healthset','Health settings'],['history','History & undo'],
+    ['removetxn','Remove a transaction'],['admin','Access (who can sign in)'],['about','About']]);
+  h += '<div class="actions" style="margin-top:14px"><button class="btn ghost" data-act="snapshot-tiller">⬇ Back up envelopes to Tiller</button></div>'+
+    '<div class="empty" style="padding:4px 2px 0;font-size:11.5px;text-align:left">Writes a read-only "SBC Envelopes" tab into your Tiller sheet so Tiller always has an accurate copy. Also refreshes automatically each hour.</div>';
+  // Log out: on phones it lives here; on desktop it's in the sidebar footer.
+  if(!desktop){
+    h += '<div class="actions" style="margin-top:18px"><button class="btn ghost" data-act="logout">Log out</button></div>';
+  }
+  h += '<div class="empty" style="padding-top:18px;font-size:12px">SBC Money · '+esc(state.boot.user)+'</div>';
+  $('#shell').innerHTML = h;
+}
+
+/* ============================ access / admin (v3.8) ============================ */
+function renderAdmin(){
+  $('#shell').innerHTML = '<h2 class="viewtitle">Access</h2><div class="spin"></div>';
+  run('apiAccess').then(function(a){ state.access = a; drawAdmin(); }).catch(fail);
+}
+function drawAdmin(){
+  var a = state.access;
+  var h = '<button class="backlink" data-act="goview" data-arg="settings">‹ Settings</button>'+
+    '<h2 class="viewtitle">Access</h2>';
+  h += '<div class="empty" style="padding:4px 0 14px">These '+esc('@'+a.domain)+' accounts can sign in to SBC Money. '+
+    (a.isAdmin?'Add a family member’s email to give them access.':'Only an admin can change this list.')+'</div>';
+  h += '<div class="card">';
+  a.allowed.forEach(function(em){
+    var isAdm = a.admins.indexOf(em)>-1;
+    var isMe = em===String(a.me).toLowerCase();
+    h += '<div class="envrow"><span class="nm">'+esc(em)+
+      (isAdm?' <span class="bal" style="opacity:.6">· admin</span>':'')+
+      (isMe?' <span class="bal" style="opacity:.6">· you</span>':'')+'</span>'+
+      (a.isAdmin && !isAdm ? '<button class="btn ghost sm warn" data-act="admin-remove" data-arg="'+esc(em)+'">Remove</button>'
+        : '<span style="opacity:.3">—</span>')+
+      '</div>';
+  });
+  h += '</div>';
+  if(a.isAdmin){
+    h += '<div class="grp"><h3>Add access</h3><div class="card" style="padding:12px">'+
+      '<input id="adminEmail" class="amt" style="width:100%;box-sizing:border-box" '+
+        'placeholder="name@'+esc(a.domain)+'" autocomplete="off">'+
+      '<div class="actions" style="margin-top:10px"><button class="btn" data-act="admin-add">Add to allowlist</button></div>'+
+      '</div></div>';
+  }
+  $('#shell').innerHTML = h;
+}
+function adminSave(list){
+  return run('apiSetAllowedEmails', { emails: list }).then(function(a){
+    state.access = a; drawAdmin();
+  }).catch(function(e){ toast('⚠ '+(e.message||e)); });
+}
+function adminAdd(){
+  var el = $('#adminEmail'); if(!el) return;
+  var em = String(el.value||'').trim().toLowerCase();
+  if(!em){ toast('Enter an email'); return; }
+  var list = (state.access.allowed||[]).slice();
+  if(list.indexOf(em)>-1){ toast('Already on the list'); return; }
+  list.push(em);
+  adminSave(list).then(function(){ toast('Access granted ✓'); });
+}
+function adminRemove(em){
+  confirmUi('Remove access for '+em+'?', 'Remove').then(function(ok){
+    if(!ok) return;
+    var list = (state.access.allowed||[]).filter(function(x){ return x!==em; });
+    adminSave(list).then(function(){ toast('Access removed ✓'); });
+  });
+}
+
+/* Explicit sign-out: drop the cached token + GIS auto-select, show sign-in. */
+function signOut(){
+  confirmUi('Log out of SBC Money?', 'Log out').then(function(ok){
+    if(!ok) return;
+    auth = { token:'', email:'', exp:0 }; persistAuth();
+    try{ google.accounts.id.disableAutoSelect(); }catch(e){}
+    state.boot = null;
+    var si = $('#signin'); if(si) si.style.display = 'flex';
+    if(gsiUp) try{ google.accounts.id.prompt(); }catch(e2){}
+    toast('Logged out');
+  });
+}
+
+/* ============================ remove a transaction (v3.9) ============================ */
+function renderRemoveTxn(){
+  var h = '<button class="backlink" data-act="goview" data-arg="settings">‹ Settings</button>'+
+    '<h2 class="viewtitle">Remove a transaction</h2>';
+  h += '<div class="empty" style="padding:4px 0 12px;text-align:left">For removing a duplicate or '+
+    'orphaned transaction — one that’s no longer in Tiller. Removals are logged and can be undone '+
+    'from History. Anything Tiller still has is protected and can’t be removed here.</div>';
+  h += '<div class="card" style="padding:12px">'+
+    '<input id="rmQ" class="amt" style="width:100%;box-sizing:border-box" '+
+      'placeholder="Search description or amount…" value="'+esc(state.removeq||'')+'">'+
+    '<div class="actions" style="margin-top:10px"><button class="btn" data-act="rmtxn-search">Search</button></div></div>';
+  if(state.removeResults){
+    if(!state.removeResults.length){
+      h += '<div class="empty" style="padding-top:16px">No matching transactions.</div>';
+    } else {
+      h += '<div class="card" style="margin-top:12px">';
+      state.removeResults.forEach(function(t){
+        var legs = (t.legs||[]).map(function(l){ return envName(l.envelopeId)+' '+money(l.amount); }).join(', ');
+        h += '<div class="oprow"><div class="what">'+
+          '<div class="note">'+esc(t.description)+' · '+money(t.amount)+'</div>'+
+          '<div class="sub">'+esc(t.date)+' · '+esc(t.account||'')+(legs?' · '+esc(legs):'')+'</div></div>'+
+          '<button class="btn ghost sm warn" data-act="rmtxn-go" data-arg="'+esc(t.txnId)+'">Remove</button></div>';
+      });
+      h += '</div>';
+    }
+  }
+  $('#shell').innerHTML = h;
+}
+function removeTxnSearch(){
+  var q = String(($('#rmQ')||{}).value||'').trim();
+  state.removeq = q;
+  if(!q){ state.removeResults=[]; renderRemoveTxn(); return; }
+  run('apiRegister',{q:q, includeHidden:true, limit:50}).then(function(items){
+    state.removeResults = items||[];
+    if(state.view==='removetxn') renderRemoveTxn();
+  }).catch(function(e){ toast('⚠ '+(e.message||e)); });
+}
+function removeTxnGo(txnId){
+  var t = (state.removeResults||[]).find(function(x){ return x.txnId===txnId; });
+  var label = t ? (t.description+' · '+money(t.amount)) : txnId;
+  confirmUi('Remove this transaction?\n\n"'+label+'"\n\nThis can be undone from History.', 'Remove').then(function(ok){
+    if(!ok) return;
+    run('apiRemoveTxn',{txnId:txnId}).then(function(){
+      toast('Removed ✓');
+      state.removeResults = (state.removeResults||[]).filter(function(x){ return x.txnId!==txnId; });
+      invalidateData(); refreshBoot();
+      if(state.view==='removetxn') renderRemoveTxn();
+    }).catch(function(e){ toast('⚠ '+(e.message||e)); });
+  });
+}
+
+/* ============================ reconcile accounts (v3.10) ============================ */
+function reconciledMap(){ try{ return JSON.parse(localStorage.getItem('sbcReconciled')||'{}'); }catch(e){ return {}; } }
+function renderReconcile(){
+  if(!state.reconcile){ $('#shell').innerHTML='<h2 class="viewtitle">Reconcile accounts</h2><div class="spin"></div>'; }
+  else { drawReconcile(); }
+  run('apiReconcile').then(function(r){
+    if(Object.keys(state.baledit||{}).length) return; // don't clobber an in-progress edit
+    state.reconcile=r; if(state.view==='reconcile') drawReconcile();
+  }).catch(function(e){ if(!state.reconcile) fail(e); });
+}
+function reconRow(a, rev){
+  var stale = a.days!=null && a.days>=30 && !a.dormant;
+  var editing = state.baledit && state.baledit.account===a.name;
+  var h = '<div class="balrow" style="flex-wrap:wrap">'+
+    '<span class="nm">'+esc(a.name)+'</span>'+
+    '<span class="upd'+(stale?' stale':'')+'">'+esc(a.updated||'')+(a.pending?' · '+a.pending+' pending':'')+'</span>'+
+    '<span class="bal">'+money(a.balance)+'</span>'+
+    '<span style="flex-basis:100%;display:flex;gap:8px;margin-top:6px;justify-content:flex-end;align-items:center">';
+  if(rev[a.name]) h += '<span style="font-size:11px;color:var(--ink-3)">reviewed '+esc(rev[a.name])+'</span>';
+  h += '<button class="btn ghost sm" data-act="recon-manual" data-arg="'+esc(a.name)+'">'+(a.manual?'✓ Manual':'Mark manual')+'</button>';
+  if(a.manual) h += '<button class="btn ghost sm" data-act="recon-update" data-arg="'+esc(a.name)+'">Update balance</button>';
+  h += '<button class="btn ghost sm" data-act="recon-reviewed" data-arg="'+esc(a.name)+'">✓ Reviewed</button></span>';
+  if(editing){
+    h += '<span style="flex-basis:100%;display:flex;gap:8px;margin-top:8px">'+
+      '<input id="balInput" class="amt" style="flex:1" inputmode="decimal" placeholder="Current balance" value="'+esc(a.balance)+'">'+
+      '<button class="btn sm" data-act="recon-save" data-arg="'+esc(a.name)+'">Save</button>'+
+      '<button class="btn ghost sm" data-act="recon-cancel">Cancel</button></span>';
+  }
+  return h+'</div>';
+}
+function drawReconcile(){
+  var r = state.reconcile, rev = reconciledMap();
+  var manual  = (r.accounts||[]).filter(function(a){ return a.manual && !a.dormant; });
+  var auto    = (r.accounts||[]).filter(function(a){ return !a.manual && !a.dormant; });
+  var dormant = (r.accounts||[]).filter(function(a){ return a.dormant; });
+  var h = '<h2 class="viewtitle">Reconcile accounts</h2>'+
+    '<div class="empty" style="padding:2px 0 12px;text-align:left">Check each account against your bank. '+
+    '<b>Manual</b> accounts (dead/no feed — e.g. CC Rewards, HSA) you update by hand with <b>Update balance</b>, '+
+    'which writes back to Tiller so both stay in sync. <b>Automatic</b> accounts come from the feed — just review. '+
+    'No feed for over 6 months → Closed / Dormant.</div>';
+  h += settingsSectionLabel('✋ MANUAL — UPDATE BY HAND')+'<div class="card">';
+  if(manual.length) manual.forEach(function(a){ h += reconRow(a, rev); });
+  else h += '<div class="empty" style="padding:12px;text-align:left">None yet — tap “Mark manual” on a fed account below to move it here.</div>';
+  h += '</div>';
+  h += settingsSectionLabel('🔄 AUTOMATIC — FED')+'<div class="card">';
+  if(auto.length) auto.forEach(function(a){ h += reconRow(a, rev); });
+  else h += '<div class="empty" style="padding:12px">No automatic accounts.</div>';
+  h += '</div>';
+  if(dormant.length){
+    h += '<div class="grp" style="margin-top:14px"><h3 data-act="recon-dormant-toggle" style="cursor:pointer">'+
+      (state.showDormant?'▾':'▸')+' Closed / Dormant · '+dormant.length+'</h3>';
+    if(state.showDormant){
+      h += '<div class="card">';
+      dormant.forEach(function(a){ h += reconRow(a, rev); });
+      h += '</div>';
+    }
+    h += '</div>';
+  }
+  $('#shell').innerHTML = h;
+}
+function reconUpdate(account){ state.baledit = { account: account }; drawReconcile();
+  var el=$('#balInput'); if(el){ el.focus(); el.select(); } }
+function reconCancel(){ state.baledit = null; drawReconcile(); }
+function reconSave(account){
+  var el=$('#balInput'); if(!el) return;
+  var v=el.value;
+  if(v===''||isNaN(Number(v))){ toast('Enter a number'); return; }
+  var amt=Number(v);
+  var btn=document.querySelector('[data-act="recon-save"]');
+  if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
+  run('apiManualBalance', { account:account, balance:amt }).then(function(){
+    toast('Balance updated · Tiller ✓');
+    // Optimistic update: patch this one account locally instead of re-scanning
+    // the 27k-row Balance History (that refetch was the slow part).
+    var a=(state.reconcile&&state.reconcile.accounts||[]).find(function(x){return x.name===account;});
+    if(a){ a.balance=amt; a.days=0; a.updated='today'; a.dormant=false; }
+    state.baledit=null; state.balances=null; invalidateData();
+    drawReconcile();
+  }).catch(function(e){
+    if(btn){ btn.disabled=false; btn.textContent='Save'; }
+    toast('⚠ '+(e.message||e));
+  });
+}
+function reconReviewed(account){
+  var m = reconciledMap();
+  m[account] = new Date().toLocaleDateString();
+  try{ localStorage.setItem('sbcReconciled', JSON.stringify(m)); }catch(e){}
+  toast('Marked reviewed ✓'); drawReconcile();
+}
+function snapshotToTiller(){
+  var btn=document.querySelector('[data-act="snapshot-tiller"]');
+  if(btn){ btn.disabled=true; btn.textContent='Backing up…'; }
+  run('apiSnapshotEnvelopesToTiller').then(function(r){
+    toast('Backed up '+r.count+' envelopes to Tiller ✓');
+    if(btn){ btn.disabled=false; btn.textContent='⬇ Back up envelopes to Tiller'; }
+  }).catch(function(e){
+    if(btn){ btn.disabled=false; btn.textContent='⬇ Back up envelopes to Tiller'; }
+    toast('⚠ '+(e.message||e));
+  });
+}
+function reconToggleManual(account){
+  var a=(state.reconcile&&state.reconcile.accounts||[]).find(function(x){return x.name===account;});
+  var on = !(a&&a.manual);
+  run('apiSetManualAccount', { account:account, manual:on }).then(function(){
+    if(a) a.manual=on;
+    if(!on && state.baledit && state.baledit.account===account) state.baledit=null;
+    toast(on?'Marked manual ✓':'Set to auto');
+    drawReconcile();
+  }).catch(function(e){ toast('⚠ '+(e.message||e)); });
+}
+
+/* ============================ health settings (v3.6) ============================ */
+function renderHealthSettings(){
+  $('#shell').innerHTML = '<h2 class="viewtitle">Health settings</h2><div class="spin"></div>';
+  run('apiHealthSettings').then(function(hs){
+    state.healthset = hs;
+    drawHealthSettings();
+  }).catch(fail);
+}
+function drawHealthSettings(){
+  var hs = state.healthset;
+  var h = '<h2 class="viewtitle">Health settings</h2>';
+  h += '<div class="empty" style="padding:4px 0 14px">The health check compares on-budget envelope money '+
+    'against bank cash (cash groups − debt groups). Changes apply on the next dashboard load.</div>';
+
+  h += '<div class="grp"><h3>Account groups (bank side)</h3><div class="card">';
+  h += '<div class="empty" style="padding:6px 0;font-size:12px">Tap a group to cycle: not counted → 💵 cash → 💳 debt</div>';
+  hs.accountGroups.forEach(function(g){
+    var st = hs.cashGroups.indexOf(g)>-1 ? 'cash' : (hs.debtGroups.indexOf(g)>-1 ? 'debt' : '');
+    h += '<div class="envrow click" data-act="hs-group" data-arg="'+esc(g)+'">'+
+      '<span class="nm">'+esc(g)+'</span>'+
+      '<span class="bal">'+(st==='cash'?'💵 cash':st==='debt'?'💳 debt':'<span style="opacity:.4">not counted</span>')+'</span></div>';
+  });
+  h += '</div></div>';
+
+  h += '<div class="grp"><h3>Envelopes (budget side)</h3><div class="card">';
+  h += '<div class="empty" style="padding:6px 0;font-size:12px">Off-budget = money that lives outside the cash accounts '+
+    '(brokerage, REBA, rewards). Tap to toggle.</div>';
+  hs.envelopes.forEach(function(n){
+    var off = hs.offBudget.indexOf(n)>-1;
+    h += '<div class="envrow click" data-act="hs-env" data-arg="'+esc(n)+'">'+
+      '<span class="nm">'+esc(n)+'</span>'+
+      '<span class="bal'+(off?' neg':'')+'">'+(off?'off-budget':'<span style="opacity:.4">on-budget</span>')+'</span></div>';
+  });
+  h += '</div></div>';
+
+  h += '<div class="actions"><button class="btn" data-act="hs-save">Save</button>'+
+    '<button class="btn ghost" data-act="goview" data-arg="dash">Cancel</button></div>';
+  $('#shell').innerHTML = h;
+}
+function hsSave(){
+  var hs = state.healthset;
+  run('apiSetHealthSettings', { offBudget: hs.offBudget,
+    cashGroups: hs.cashGroups, debtGroups: hs.debtGroups })
+  .then(function(r){
+    state.healthset = r;
+    state.dash = null; // recompute health next dashboard load
+    toast('Health settings saved ✓');
+    go('dash');
+  }).catch(function(e){ toast('⚠ '+(e.message||e)); });
+}
+
+/* ============================ about ============================ */
+function renderAbout(){
+  var b = state.boot;
+  var h = '<div class="aboutwrap">'+
+    '<svg width="260" height="156" viewBox="0 0 192 116" aria-label="SBC Money logo">'+
+    '<rect x="38" y="0" width="140" height="80" rx="12" fill="#0a6b60"/>'+
+    '<rect x="32" y="7" width="140" height="80" rx="12" fill="#0c8074"/>'+
+    '<rect x="26" y="14" width="140" height="80" rx="12" fill="#0E9384"/>'+
+    '<rect x="36" y="24" width="120" height="60" rx="8" fill="none" stroke="#5EEAD4" stroke-width="4"/>'+
+    '<rect x="42" y="30" width="7" height="1.2" fill="#5EEAD4" opacity="0.75"/>'+
+    '<rect x="42" y="30" width="1.2" height="7" fill="#5EEAD4" opacity="0.75"/>'+
+    '<rect x="143" y="30" width="7" height="1.2" fill="#5EEAD4" opacity="0.75"/>'+
+    '<rect x="148.8" y="30" width="1.2" height="7" fill="#5EEAD4" opacity="0.75"/>'+
+    '<rect x="42" y="76.8" width="7" height="1.2" fill="#5EEAD4" opacity="0.75"/>'+
+    '<rect x="42" y="71" width="1.2" height="7" fill="#5EEAD4" opacity="0.75"/>'+
+    '<rect x="143" y="76.8" width="7" height="1.2" fill="#5EEAD4" opacity="0.75"/>'+
+    '<rect x="148.8" y="71" width="1.2" height="7" fill="#5EEAD4" opacity="0.75"/>'+
+    '<rect x="69.7" y="37" width="2.6" height="7" rx="1.3" fill="#ffffff"/>'+
+    '<rect x="69.7" y="64" width="2.6" height="7" rx="1.3" fill="#ffffff"/>'+
+    '<rect x="121.8" y="37" width="2.6" height="7" rx="1.3" fill="#ffffff"/>'+
+    '<rect x="121.8" y="64" width="2.6" height="7" rx="1.3" fill="#ffffff"/>'+
+    '<text x="71" y="66" text-anchor="middle" font-size="33" font-weight="700" fill="#ffffff" font-family="inherit">S</text>'+
+    '<text x="96" y="66" text-anchor="middle" font-size="33" font-weight="700" fill="#ffffff" font-family="inherit">B</text>'+
+    '<text x="121" y="66" text-anchor="middle" font-size="33" font-weight="700" fill="#ffffff" font-family="inherit">C</text>'+
+    '</svg>'+
+    '<div class="abname">SBC <span>Money</span></div>'+
+    '<div class="abver">Server '+esc(b.version||'')+' · UI '+esc(FE_VERSION)+' · '+esc(b.versionDate||'')+'</div>'+
+    (b.version!==FE_VERSION?'<div class="abver" style="color:#f59e0b">⚠ UI and server versions differ — one side of the deploy didn’t take</div>':'')+
+    '<div class="absub">Signed in as '+esc(b.user)+'</div>'+
+    '<div class="absoon">Instructions and helpful stuff coming soon.</div>'+
+    '</div>';
+  $('#shell').innerHTML = h;
+}
+
+/* ============================ history ============================ */
+function renderHistory(){
+  $('#shell').innerHTML = '<h2 class="viewtitle">History</h2><div class="spin"></div>';
+  run('apiHistory', 50).then(function(ops){
+    state.history = ops;
+    var h = '<h2 class="viewtitle">History</h2>';
+    if(!ops.length){ h += '<div class="empty">No activity yet.</div>'; $('#shell').innerHTML=h; return; }
+    h += '<div class="card">';
+    ops.forEach(function(op){
+      h += '<div class="oprow"><div class="what">'+
+        '<div class="note">'+esc(op.note || op.action)+'</div>'+
+        '<div class="sub">'+esc(op.timestamp)+' · '+esc(op.user)+' · '+esc(op.opId)+'</div></div>';
+      if(op.undoneBy) h += '<span class="undone">undone</span>';
+      else if(op.undoable) h += '<button class="btn ghost sm" data-act="undo" data-arg="'+esc(op.opId)+'">Undo</button>';
+      h += '</div>';
+    });
+    h += '</div>';
+    $('#shell').innerHTML = h;
+  }).catch(fail);
+}
+function doUndo(opId){
+  var op = (state.history||[]).find(function(x){ return x.opId===opId; });
+  confirmUi('Undo this?\n\n"'+((op&&op.note)||opId)+'"', 'Undo')
+  .then(function(ok){
+    if(!ok) return;
+    run('apiUndo', opId).then(function(){
+      toast('Undone ✓');
+      state.inbox=null;
+      invalidateData();
+      refreshBoot();
+      renderHistory();
+    }).catch(function(e){ toast('⚠ '+(e.message||e)); });
+  });
+}
+
+/* ============================ confirm dialog ============================ */
+function confirmUi(msg, label){
+  return new Promise(function(res){
+    state.confirmRes = res;
+    $('#ovl').innerHTML = '<div class="ovl" data-act="confirm-no"><div class="panel confirm">'+
+      '<div class="cmsg">'+esc(msg)+'</div>'+
+      '<div class="actions" style="justify-content:flex-end">'+
+      '<button class="btn ghost" data-act="confirm-cancel">Cancel</button>'+
+      '<button class="btn" data-act="confirm-yes">'+esc(label||'Confirm')+'</button></div></div></div>';
+  });
+}
+function closeConfirm(v){
+  $('#ovl').innerHTML='';
+  var r = state.confirmRes; state.confirmRes = null;
+  if(r) r(v);
+}
+
+/* ============================ envelope picker overlay ============================ */
+function openPicker(ctx){
+  state.pickCtx = ctx;
+  var h = '<div class="ovl" data-act="picker-close"><div class="panel" data-stop="1">'+
+    '<input id="pickQ" placeholder="Search envelopes…" autocomplete="off">'+
+    '<div class="picklist" id="pickList">'+pickListHtml('')+'</div></div></div>';
+  $('#ovl').innerHTML = h;
+  var q = $('#pickQ');
+  q.focus();
+  q.addEventListener('input', function(){
+    $('#pickList').innerHTML = pickListHtml(q.value);
+  });
+}
+function pickListHtml(q){
+  q = String(q||'').toLowerCase();
+  var items = state.picker.filter(function(e){
+    return !q || e.name.toLowerCase().indexOf(q)!==-1 || e.group.toLowerCase().indexOf(q)!==-1;
+  }).slice(0,80);
+  return items.map(function(e){
+    return '<button data-act="picker-pick" data-arg="'+esc(e.id)+'"><span>'+esc(e.name)+
+      '</span><span class="g">'+esc(e.group)+'</span></button>';
+  }).join('') || '<button disabled>No matches</button>';
+}
+function closePicker(){ $('#ovl').innerHTML=''; state.pickCtx=null; }
+function pickerPicked(envId){
+  var c = state.pickCtx;
+  closePicker();
+  if(!c) return;
+  if(c.kind==='sel'){
+    state.sel[c.key]=envId; drawInbox();
+  } else if(c.kind==='planline'){
+    planFormCapture();
+    state.planEdit.lines[c.idx].envelopeId = envId; drawPlans();
+  } else if(c.kind==='moveto'){
+    if(state.move){ state.move.toId = envId; renderEnvDetail(); }
+  } else if(c.kind==='regenv'){
+    state.register.envelope = envId; renderTxns();
+  } else {
+    var kind = c.kind.replace(/line$/,'');
+    var lines = splitLinesOf(kind, c.key);
+    if(lines[c.idx]) lines[c.idx].envelopeId = envId;
+    redrawFor(kind);
+  }
+}
+
+/* ============================ event delegation ============================ */
+document.addEventListener('click', function(ev){
+  var el = ev.target.closest('[data-act]');
+  if(!el){
+    if(ev.target.classList && ev.target.classList.contains('ovl')) closePicker();
+    return;
+  }
+  var act = el.dataset.act, arg = el.dataset.arg || '';
+  var p = arg.split('|');
+  switch(act){
+    case 'goview': go(arg); break;
+    case 'approve': approve(arg); break;
+    case 'approve-all': approveAll(); break;
+    case 'approve-split': approveSplit(arg); break;
+    case 'pick-sel': state.sel[p[0]]=p[1]; drawInbox(); break;
+    case 'split-on':
+      state.split[arg] = { on:true, lines:[
+        {envelopeId: state.sel[arg]||
+          ((state.inbox.find(function(t){return t.txnId===arg;})||{}).suggestedId)||'', amount:''},
+        {envelopeId:'', amount:''} ] };
+      drawInbox(); break;
+    case 'split-off': delete state.split[arg]; drawInbox(); break;
+    case 'split-add': splitLinesOf(p[0],p[1]).push({envelopeId:'',amount:''}); redrawFor(p[0]); break;
+    case 'split-rm':
+      var ls = splitLinesOf(p[0],p[1]); ls.splice(Number(p[2]),1);
+      if(!ls.length) ls.push({envelopeId:'',amount:''});
+      redrawFor(p[0]); break;
+    case 'open-picker': openPicker({kind:p[0], key:p[1], idx:Number(p[2]||0)}); break;
+    case 'picker-pick': pickerPicked(arg); break;
+    case 'picker-close': if(ev.target===el) closePicker(); break;
+    case 'confirm-yes': closeConfirm(true); break;
+    case 'confirm-cancel': closeConfirm(false); break;
+    case 'confirm-no': if(ev.target===el) closeConfirm(false); break;
+    case 'fund-this': go('fund'); break;
+    case 'fund-plan': fundStart(p[0], p[1]); break;
+    case 'fund-manual': fundStart(p[0], null); break;
+    case 'fund-cancel': delete state.fund[arg]; drawFund(); break;
+    case 'fund-go': fundGo(arg); break;
+    case 'plan-new':
+      state.planEdit = {planId:'', name:'', mode:'fixed', incomeMatch:'', active:true,
+        lines:[{envelopeId:'',fixed:'',percent:'',remainder:false}]};
+      drawPlans(); break;
+    case 'plan-tiller': planFromTiller(); break;
+    case 'plans-section':
+      state.plansOpen = !state.plansOpen; drawFund(); break;
+    case 'plan-open':
+      state.planOpen = state.planOpen || {};
+      state.planOpen[arg] = !state.planOpen[arg];
+      drawPlans(); break;
+    case 'plan-versions':
+      state.showVersions = !state.showVersions; drawPlans(); break;
+    case 'plan-edit':
+      var pl = state.plans.find(function(x){return x.planId===arg;});
+      state.planEdit = JSON.parse(JSON.stringify(pl));
+      drawPlans(); break;
+    case 'plan-dup':
+      var pd = state.plans.find(function(x){return x.planId===arg;});
+      if(pd){ state.planEdit = JSON.parse(JSON.stringify(pd));
+        state.planEdit.planId=''; state.planEdit.active=true;
+        state.planEdit.name = pd.name + ' (copy)';
+        drawPlans(); }
+      break;
+    case 'plan-restore':
+      var pv = state.plans.find(function(x){return x.planId===arg;});
+      if(pv){ state.planEdit = JSON.parse(JSON.stringify(pv));
+        state.planEdit.planId=''; state.planEdit.active=true;
+        state.planEdit.name = pv.name.replace(/\s+—\s+saved\s+.*$/, '');
+        drawPlans(); }
+      break;
+    case 'plan-cancel': state.planEdit=null; drawPlans(); break;
+    case 'plan-save': planSave(); break;
+    case 'plan-add': planFormCapture();
+      state.planEdit.lines.push({envelopeId:'',fixed:'',percent:'',remainder:false});
+      drawPlans(); break;
+    case 'plan-rm': planFormCapture(); state.planEdit.lines.splice(Number(arg),1);
+      if(!state.planEdit.lines.length) state.planEdit.lines.push({envelopeId:'',fixed:'',percent:'',remainder:false});
+      drawPlans(); break;
+    case 'plan-rem': planFormCapture();
+      state.planEdit.lines.forEach(function(l,i){ l.remainder = (i===Number(arg)) && el.checked; });
+      drawPlans(); break;
+    case 'plan-off': planToggle(arg, false); break;
+    case 'plan-on': planToggle(arg, true); break;
+    case 'reg-search': state.register.q = $('#regQ').value; renderTxns(); break;
+    case 'reg-env-clear': state.register.envelope=''; renderTxns(); break;
+    case 'reg-hidden': state.register.includeHidden = !state.register.includeHidden; renderTxns(); break;
+    case 'reg-clear': state.register.q=''; state.register.account=''; state.register.envelope='';
+      state.register.includeHidden=false; renderTxns(); break;
+    case 'grp-toggle':
+      state.envOpen[arg] = state.envOpen[arg]===false ? true : false;
+      try{ localStorage.setItem('sbcEnvOpen', JSON.stringify(state.envOpen)); }catch(e2){}
+      renderEnvelopes(); break;
+    case 'env-open': openEnvelope(arg); break;
+    case 'env-back': go('envelopes'); break;
+    case 'env-new': state.envNew={name:'',group:'',type:'Expense'}; renderEnvelopes(); break;
+    case 'env-new-cancel': state.envNew=null; renderEnvelopes(); break;
+    case 'env-new-save': envNewSave(); break;
+    case 'env-show-archived': state.showArchived=!state.showArchived; renderEnvelopes(); break;
+    case 'env-unarchive': envUnarchive(arg); break;
+    case 'env-rename': (function(){ var e=findEnv(state.envDetail.id); if(e){ state.envRename={id:e.id, name:e.name}; renderEnvDetail(); } })(); break;
+    case 'env-rename-cancel': state.envRename=null; renderEnvDetail(); break;
+    case 'env-rename-save': envRenameSave(); break;
+    case 'env-archive': envArchive(arg); break;
+    case 'hs-group': (function(){
+      var hs = state.healthset, g = arg;
+      var ci = hs.cashGroups.indexOf(g), di = hs.debtGroups.indexOf(g);
+      if(ci===-1 && di===-1) hs.cashGroups.push(g);        // not counted → cash
+      else if(ci>-1){ hs.cashGroups.splice(ci,1); hs.debtGroups.push(g); } // cash → debt
+      else hs.debtGroups.splice(di,1);                      // debt → not counted
+      drawHealthSettings();
+    })(); break;
+    case 'hs-env': (function(){
+      var hs = state.healthset;
+      var i = hs.offBudget.indexOf(arg);
+      if(i===-1) hs.offBudget.push(arg); else hs.offBudget.splice(i,1);
+      drawHealthSettings();
+    })(); break;
+    case 'hs-save': hsSave(); break;
+    case 'admin-add': adminAdd(); break;
+    case 'admin-remove': adminRemove(arg); break;
+    case 'logout': signOut(); break;
+    case 'rmtxn-search': removeTxnSearch(); break;
+    case 'rmtxn-go': removeTxnGo(arg); break;
+    case 'recon-update': reconUpdate(arg); break;
+    case 'recon-cancel': reconCancel(); break;
+    case 'recon-save': reconSave(arg); break;
+    case 'recon-reviewed': reconReviewed(arg); break;
+    case 'recon-manual': reconToggleManual(arg); break;
+    case 'snapshot-tiller': snapshotToTiller(); break;
+    case 'recon-dormant-toggle': state.showDormant = !state.showDormant; drawReconcile(); break;
+    case 'env-filter': if(state.envDetail){ state.envDetail.filter=arg; renderEnvDetail(); } break;
+    case 'acct-toggle': acctToggle(arg); break;
+    case 'import-now': importNowUi(); break;
+    case 'bal-reorder':
+      state.balReorder = !state.balReorder;
+      if(!state.balReorder) balSaveOrder();
+      drawBalances(); break;
+    case 'bal-up': balMove(arg,-1); break;
+    case 'bal-down': balMove(arg,1); break;
+    case 'bal-acct-up': balMoveAccount(p[0],p[1],-1); break;
+    case 'bal-acct-down': balMoveAccount(p[0],p[1],1); break;
+    case 'bal-edit': balEdit(arg); break;
+    case 'bal-edit-save': balEditSave(arg); break;
+    case 'bal-edit-cancel': balEditCancel(); break;
+    case 'sync-refresh':
+      state.sync = null;
+      renderSync(); break;
+    case 'sync-dups-toggle':
+      state.showAllDups = !state.showAllDups;
+      drawSync(); break;
+    case 'accept-tiller': acceptTiller(arg); break;
+    case 'backfill-go': backfillGo(); break;
+    case 'inspect-txn': inspectTxn(arg); break;
+    case 'inspect-close':
+      if(el.tagName==='BUTTON' || ev.target===el) $('#ovl').innerHTML='';
+      break;
+    case 'env-move-start': state.move={toId:'', amount:''}; renderEnvDetail(); break;
+    case 'env-move-cancel': state.move=null; renderEnvDetail(); break;
+    case 'env-move-go': moveGo(); break;
+    case 'env-sweep-pool': sweepToPool(); break;
+    case 'resplit-on':
+      var rt = (state.register.items||[]).find(function(x){return x.txnId===arg;});
+      if(rt) state.resplit[arg] = rt.legs.map(function(l){
+        return {envelopeId:l.envelopeId, amount:l.amount}; });
+      drawTxns(); break;
+    case 'resplit-cancel': delete state.resplit[arg]; drawTxns(); break;
+    case 'resplit-go': resplitGo(arg); break;
+    case 'unapprove': unapprove(arg); break;
+    case 'undo': doUndo(arg); break;
+  }
+});
+document.addEventListener('input', function(ev){
+  var el = ev.target.closest('[data-act]');
+  if(!el) return;
+  var p = (el.dataset.arg||'').split('|');
+  if(el.dataset.act==='split-amt'){
+    var lines = splitLinesOf(p[0], p[1]);
+    if(lines[Number(p[2])]){
+      lines[Number(p[2])].amount = el.value;
+      var foot = el.closest('.splitbox');
+      if(foot){ // live-update remaining without full redraw (keeps focus)
+        var key=p[1], kind=p[0];
+        var total = 0;
+        if(kind==='inbox'||kind==='fund'){
+          var t=(state.inbox||[]).find(function(x){return x.txnId===key;}); total=t?t.amount:0;
+        } else {
+          var r=(state.register.items||[]).find(function(x){return x.txnId===key;}); total=r?r.amount:0;
+        }
+        var sum=0; lines.forEach(function(l){ sum+=cents(l.amount); });
+        var left=cents(total)-sum;
+        var lf=foot.querySelector('.splitfoot .left');
+        if(lf){ lf.textContent = left===0?'Fully assigned ✓':'Remaining: '+money(left/100);
+          lf.classList.toggle('bad', left!==0); }
+        // refresh action buttons enabled state
+        var card = el.closest('.txncard, .regrow');
+        if(card){
+          var btn = card.querySelector('[data-act="approve-split"],[data-act="resplit-go"],[data-act="fund-go"]');
+          if(btn){
+            var ready = splitReady(total, lines) &&
+              (btn.dataset.act!=='fund-go' || (state.fund[key]&&state.fund[key].incomeEnvelopeId));
+            btn.disabled = !ready;
+          }
+        }
+      }
+    }
+  } else if(el.dataset.act==='plan-fixed'){
+    planFormCapture(); state.planEdit.lines[Number(el.dataset.arg)].fixed = el.value;
+  } else if(el.dataset.act==='plan-pct'){
+    planFormCapture(); state.planEdit.lines[Number(el.dataset.arg)].percent = el.value;
+  } else if(el.dataset.act==='move-amt'){
+    if(state.move) state.move.amount = el.value;
+  }
+});
+document.addEventListener('change', function(ev){
+  var el = ev.target.closest('[data-act]');
+  if(!el) return;
+  if(el.dataset.act==='fund-inc'){
+    var f = state.fund[el.dataset.arg];
+    if(f){ f.incomeEnvelopeId = el.value; drawFund(); }
+  } else if(el.dataset.act==='reg-acct'){
+    state.register.account = el.value; renderTxns();
+  }
+});
+
+/* ============================ start ============================ */
+if(authValid()){ boot(); }
+else { $('#signin').style.display='flex'; $('#shell').innerHTML=''; }
+</script>
+</body>
+</html>
