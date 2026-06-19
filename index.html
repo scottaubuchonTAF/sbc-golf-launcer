@@ -86,7 +86,7 @@
 
   <!-- ============ HOME ============ -->
   <div id="screen-home">
-    <h1>🏌️ SBC GOLF</h1>
+    <img src="logo.png" alt="SBC Golf" style="display:block;width:min(72%,260px);margin:14px auto 4px">
     <div class="sub">Live golf scoring · play on your own phone</div>
     <div class="card">
       <button class="btn" onclick="showCreate()">Start a New Game</button>
@@ -428,4 +428,222 @@
   }
 
   // ---------------- join ----------------
-  function showJoin(){ show('join'); $('joinPickCard').classList.ad
+  function showJoin(){ show('join'); $('joinPickCard').classList.add('hide'); }
+  function doLookup(){
+    var code=$('joinCode').value.trim().toUpperCase();
+    if(code.length<4){ $('joinErr').textContent='Enter the 4-letter code.'; return; }
+    $('lookupBtn').disabled=true; $('lookupBtn').textContent='Searching…'; $('joinErr').textContent='';
+    call('getGameByCode',[code]).then(function(r){
+      $('lookupBtn').disabled=false; $('lookupBtn').textContent='Find Game';
+      if(!r||!r.ok){ $('joinErr').textContent=(r&&r.error)||'Game not found.'; return; }
+      ST.gameId=r.game.gameId; ST.code=r.game.code; ST.game=r.game; ST.holes=r.game.holes;
+      $('joinGameName').textContent=r.game.name+' · '+r.game.holes+' holes';
+      renderPick($('joinPlayers'), function(pid){ ST.myPlayerId=pid; enterPlay(); });
+      $('joinPickCard').classList.remove('hide');
+    }).catch(function(e){
+      $('lookupBtn').disabled=false; $('lookupBtn').textContent='Find Game';
+      $('joinErr').textContent='Error: '+e;
+    });
+  }
+
+  // ---------------- play ----------------
+  function enterPlay(){
+    saveLocal();
+    show('play');
+    setPlayMode(false);
+    $('playName').textContent=(ST.game&&ST.game.name)||'SBC Golf';
+    $('playCode').textContent=ST.code;
+    ST.hole=1;
+    refresh().then(function(){
+      // jump to first hole this player hasn't entered
+      ST.hole=firstOpenHole();
+      renderHole();
+    });
+    startPoll();
+  }
+  function myName(){
+    if(!ST.game) return 'you';
+    var nm='you';
+    ST.game.teams.forEach(function(t){ t.players.forEach(function(p){ if(p.id===ST.myPlayerId) nm=p.name; }); });
+    return nm;
+  }
+  // ---- format helpers ----
+  function isTeam(){ return ST.game && ST.game.format==='team_match'; }
+  function myTeamId(){ return String(ST.myPlayerId||'').split('p')[0]; }   // 't1p2' -> 't1'
+  function myTeam(){
+    var id=myTeamId();
+    return (ST.game.teams||[]).filter(function(t){return t.id===id;})[0]||null;
+  }
+  function entryId(){ return isTeam() ? myTeamId() : ST.myPlayerId; } // key this device writes
+  function segmentLabel(h){
+    if(!isTeam()) return '';
+    var c=ST.game.config||{};
+    return (h<=9) ? (c.front9||'Front 9') : (c.back9||'Back 9');
+  }
+  function firstOpenHole(){
+    if(!ST.state) return 1;
+    var key=entryId();
+    for(var h=1;h<=ST.holes;h++){
+      var hs=(ST.state.scores&&ST.state.scores[h])||{};
+      if(typeof hs[key]!=='number') return h;
+    }
+    return ST.holes;
+  }
+  function startPoll(){
+    stopPoll();
+    ST.poll=setInterval(function(){ refresh().then(renderScoreboard); }, 5000);
+  }
+  function stopPoll(){ if(ST.poll){ clearInterval(ST.poll); ST.poll=null; } }
+  function refresh(){
+    return call('getState',[ST.gameId]).then(function(r){
+      if(r&&r.ok){ ST.state=r; ST.game=r.game; ST.holes=r.game.holes; renderScoreboard(); }
+      return r;
+    });
+  }
+  function changeHole(d){
+    var h=ST.hole+d; if(h<1) h=1; if(h>ST.holes) h=ST.holes;
+    ST.hole=h; renderHole();
+  }
+  function currentStrokeVal(){
+    if(ST.strokeDraft[ST.hole]!=null) return ST.strokeDraft[ST.hole];
+    var hs=(ST.state&&ST.state.scores&&ST.state.scores[ST.hole])||{};
+    var key=entryId();
+    if(typeof hs[key]==='number') return hs[key];
+    return 4;
+  }
+  function bumpStroke(d){
+    var v=currentStrokeVal()+d; if(v<1) v=1; if(v>15) v=15;
+    ST.strokeDraft[ST.hole]=v; $('strokeVal').textContent=v;
+  }
+  function renderHole(){
+    $('holeNum').textContent=ST.hole;
+    if(isTeam()){
+      var tm=myTeam();
+      $('meLabel').textContent=(segmentLabel(ST.hole)+' · team score for '+(tm?tm.name:'your team'));
+      $('saveBtn').textContent='Save team score for this hole';
+    } else {
+      $('meLabel').textContent='Entering for '+myName();
+      $('saveBtn').textContent='Save my score for this hole';
+    }
+    $('strokeVal').textContent=currentStrokeVal();
+    $('saveMsg').textContent='';
+    renderHoleEntries();
+  }
+  function renderHoleEntries(){
+    var box=$('holeEntries'); box.innerHTML='';
+    var hs=(ST.state&&ST.state.scores&&ST.state.scores[ST.hole])||{};
+    if(isTeam()){
+      var mine=myTeamId();
+      (ST.game.teams||[]).forEach(function(t){
+        var v=hs[t.id]; var has=typeof v==='number';
+        var names=(t.players||[]).map(function(p){return p.name;}).join(' + ');
+        var row=document.createElement('div'); row.className='entry';
+        row.innerHTML='<span><span class="dot '+(has?'in':'')+'"></span>'+t.name+(t.id===mine?' (you)':'')+
+          ' <span class="small">'+names+'</span></span><span>'+(has?v:'—')+'</span>';
+        box.appendChild(row);
+      });
+      return;
+    }
+    (ST.game.teams||[]).forEach(function(t){
+      t.players.forEach(function(p){
+        var v=hs[p.id];
+        var row=document.createElement('div'); row.className='entry';
+        var has=typeof v==='number';
+        row.innerHTML='<span><span class="dot '+(has?'in':'')+'"></span>'+p.name+(p.id===ST.myPlayerId?' (you)':'')+'</span>'+
+          '<span>'+(has?v:'—')+'</span>';
+        box.appendChild(row);
+      });
+    });
+  }
+  function saveStroke(){
+    var v=currentStrokeVal();
+    $('saveBtn').disabled=true; $('saveMsg').textContent='Saving…';
+    call('submitScore',[ST.gameId, ST.hole, entryId(), v]).then(function(r){
+      $('saveBtn').disabled=false;
+      if(r&&r.ok){ ST.state=r; ST.game=r.game; delete ST.strokeDraft[ST.hole];
+        $('saveMsg').textContent='Saved ✓'; renderHoleEntries(); renderScoreboard();
+        setTimeout(function(){ if(ST.hole<ST.holes){ changeHole(1); } },500);
+      } else { $('saveMsg').textContent='Save failed.'; }
+    }).catch(function(e){ $('saveBtn').disabled=false; $('saveMsg').textContent='Error: '+e; });
+  }
+  function renderScoreboard(){
+    if(!ST.state||!ST.state.standings) return;
+    var s=ST.state.standings;
+    $('thruTag').textContent='thru '+s.completedHoles+'/'+ST.holes;
+    var team=isTeam();
+    $('legend').textContent = team
+      ? '● hole won · ○ push (tie). Low team score wins the hole = 1 point.'
+      : '● point won · ○ tie/no point. Each hole: 1 pt low ball + 1 pt team total.';
+    var box=$('teamCards'); box.innerHTML='';
+    s.teams.forEach(function(t,ti){
+      var def=(ST.game.teams||[]).filter(function(g){return g.id===t.id;})[0]||{players:[]};
+      var names=def.players.map(function(p){return p.name;}).join(' + ');
+      var brk = team ? (t.holesWon+' holes won') : ('low '+t.lowPoints+' · total '+t.sumPoints);
+      var card=document.createElement('div'); card.className='teamcard';
+      card.innerHTML='<div><div class="nm '+(ti===0?'t1':'t2')+'">'+t.name+'</div>'+
+        '<div class="pl">'+names+'</div>'+
+        '<div class="brk">'+brk+'</div></div>'+
+        '<div class="pts '+(ti===0?'t1':'t2')+'">'+t.points+'</div>';
+      box.appendChild(card);
+    });
+    renderGrid();
+  }
+  function renderGrid(){
+    if(isTeam()){ return renderTeamGrid(); }
+    var s=ST.state.standings; var teams=ST.game.teams||[];
+    var html='<table class="grid"><tr><th>Hole</th>';
+    for(var h=1;h<=ST.holes;h++) html+='<th>'+h+'</th>';
+    html+='<th>Pts</th></tr>';
+    teams.forEach(function(t,ti){
+      html+='<tr><td style="text-align:left;color:'+(ti===0?'var(--blue)':'var(--red)')+';font-weight:700">'+t.name+'</td>';
+      var tot=0;
+      for(var h=1;h<=ST.holes;h++){
+        var hr=s.holeResults[h-1];
+        var cell='';
+        if(hr&&hr.complete){
+          var lp=(hr.lowWinner===t.id)?1:0;
+          var sp=(hr.sumWinner===t.id)?1:0;
+          var pts=lp+sp; tot+=pts;
+          cell=(lp?'●':'○')+(sp?'●':'○');
+        }
+        html+='<td class="'+(cell.indexOf('●')>=0?'win':'')+'">'+cell+'</td>';
+      }
+      html+='<td class="pointmark">'+tot+'</td></tr>';
+    });
+    html+='</table>';
+    $('gridWrap').innerHTML=html;
+  }
+  function renderTeamGrid(){
+    var s=ST.state.standings; var teams=ST.game.teams||[]; var c=ST.game.config||{};
+    // grouped header: front 9 / back 9 segment labels
+    var html='<table class="grid"><tr><th rowspan="2">Team</th>'+
+      '<th colspan="9">'+(c.front9||'Front 9')+'</th>'+
+      '<th colspan="9">'+(c.back9||'Back 9')+'</th>'+
+      '<th rowspan="2">Won</th></tr><tr>';
+    for(var h=1;h<=18;h++) html+='<th>'+h+'</th>';
+    html+='</tr>';
+    teams.forEach(function(t,ti){
+      html+='<tr><td style="text-align:left;color:'+(ti===0?'var(--blue)':'var(--red)')+';font-weight:700">'+t.name+'</td>';
+      var won=0;
+      for(var h=1;h<=18;h++){
+        var hr=s.holeResults[h-1]; var cell=''; var cls='';
+        if(hr&&hr.complete){
+          var sc=hr.teamScore[t.id];
+          if(hr.winner===t.id){ cls='win'; won++; cell=sc+' ●'; }
+          else if(hr.winner===null){ cell=sc+' ○'; }
+          else { cell=''+sc; }
+        }
+        html+='<td class="'+cls+'">'+cell+'</td>';
+      }
+      html+='<td class="pointmark">'+won+'</td></tr>';
+    });
+    html+='</table>';
+    $('gridWrap').innerHTML=html;
+  }
+  function leaveGame(){ stopPoll(); clearLocal(); ST.myPlayerId=null; init(); }
+
+  // boot
+  window.addEventListener('load', init);
+</script>
+</body>
+</html>
