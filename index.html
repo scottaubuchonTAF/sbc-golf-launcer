@@ -1,68 +1,431 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SBC Golf</title>
-<!-- iPhone home-screen icon (Apps Script can't set this; this launcher can) -->
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="SBC Golf">
-<meta name="theme-color" content="#0b1f33">
-<style>
-html,body{height:100%;margin:0}
-body{
-  background:linear-gradient(180deg,#0b1f33,#081726);color:#fff;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:18px;text-align:center;
-  font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-}
-.logo{background:#fff;border-radius:28px;padding:22px 26px;box-shadow:0 8px 28px rgba(0,0,0,.35);
-  width:min(78vw,300px)}
-.logo img{display:block;width:100%;height:auto}
-a.btn{
-  background:#2e87d6;color:#fff;text-decoration:none;font-weight:700;
-  border-radius:99px;padding:13px 30px;font-size:16px;margin-top:6px;
-}
-.hint{color:#92a6bb;font-size:12.5px;max-width:300px}
-.spin{width:22px;height:22px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;
-  border-radius:50%;animation:sp 1s linear infinite}
-@keyframes sp{to{transform:rotate(360deg)}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>SBC Golf</title>
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="SBC Golf">
+  <meta name="theme-color" content="#0b1f33">
+  <style>
+    :root{
+      --bg:#0b1f33; --panel:#12273d; --panel2:#173049;
+      --silver:#d7dde3; --ink:#eaf1f8; --muted:#92a6bb;
+      --blue:#2e87d6; --red:#e23b3b; --gold:#f2b134; --green:#3fb950;
+      --line:#23415e;
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      background:linear-gradient(180deg,#0b1f33,#081726);color:var(--ink);min-height:100vh}
+    .wrap{max-width:520px;margin:0 auto;padding:16px 16px 48px}
+    h1{font-size:22px;letter-spacing:.5px;margin:8px 0 2px;text-align:center}
+    .sub{color:var(--muted);text-align:center;font-size:13px;margin-bottom:18px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+    label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px;text-transform:uppercase;letter-spacing:.6px}
+    input[type=text]{width:100%;padding:13px;border-radius:10px;border:1px solid var(--line);
+      background:var(--panel2);color:var(--ink);font-size:16px}
+    input[type=text]::placeholder{color:#5f7794}
+    button{font-family:inherit;cursor:pointer;border:none;border-radius:10px;font-size:16px;font-weight:600}
+    .btn{width:100%;padding:14px;background:var(--blue);color:#fff;margin-top:14px}
+    .btn.alt{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
+    .btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+    .row{display:flex;gap:10px}
+    .row > *{flex:1}
+    .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+    .seg button{flex:1;padding:12px;background:var(--panel2);color:var(--muted);border-radius:0}
+    .seg button.on{background:var(--blue);color:#fff}
+    .code{font-size:40px;font-weight:800;letter-spacing:10px;text-align:center;color:var(--gold);
+      padding:8px 0 2px}
+    .hint{font-size:12px;color:var(--muted);text-align:center}
+    .teamhdr{font-size:13px;font-weight:700;letter-spacing:.5px;margin:14px 0 2px}
+    .t1{color:var(--blue)} .t2{color:var(--red)}
+    .err{color:var(--red);font-size:13px;margin-top:8px;text-align:center;min-height:16px}
+    /* scoring */
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .topbar .gamename{font-weight:700}
+    .topbar .codepill{font-size:12px;color:var(--gold);border:1px solid var(--line);padding:4px 8px;border-radius:20px}
+    .holectl{display:flex;align-items:center;justify-content:space-between;margin:6px 0 14px}
+    .holectl button{width:46px;height:46px;font-size:24px;background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
+    .holectl .hole{text-align:center}
+    .holectl .hole .n{font-size:30px;font-weight:800}
+    .holectl .hole .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+    .stepper{display:flex;align-items:center;justify-content:center;gap:18px;margin:12px 0}
+    .stepper button{width:62px;height:62px;border-radius:50%;font-size:30px;background:var(--panel2);border:1px solid var(--line);color:var(--ink)}
+    .stepper .val{font-size:54px;font-weight:800;min-width:70px;text-align:center}
+    .me{font-size:13px;color:var(--muted);text-align:center;margin-bottom:4px}
+    .scoreboard{margin-top:6px}
+    .teamcard{display:flex;justify-content:space-between;align-items:center;background:var(--panel2);
+      border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px}
+    .teamcard .nm{font-weight:700}
+    .teamcard .pl{font-size:12px;color:var(--muted)}
+    .teamcard .pts{font-size:30px;font-weight:800}
+    .brk{font-size:11px;color:var(--muted)}
+    .entry{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+    .entry:last-child{border-bottom:none}
+    .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:#3a566f}
+    .dot.in{background:var(--green)}
+    .hscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    table.grid{border-collapse:collapse;width:100%;font-size:13px}
+    table.grid th,table.grid td{border:1px solid var(--line);padding:6px 8px;text-align:center;white-space:nowrap}
+    table.grid th{color:var(--muted);font-weight:600;background:var(--panel2)}
+    table.grid td.win{color:var(--green);font-weight:700}
+    .pointmark{font-weight:800}
+    .hide{display:none}
+    .center{text-align:center}
+    .small{font-size:12px;color:var(--muted)}
+    .spinner{text-align:center;color:var(--muted);padding:20px}
+    .tag{display:inline-block;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:2px 9px;margin-left:6px}
+  </style>
 </head>
 <body>
-<div class="logo"><img src="logo.png" alt="SBC Golf"></div>
-<div class="spin" id="spin"></div>
-<a class="btn" id="open" href="#" style="display:none">Open SBC Golf</a>
-<div class="hint" id="hint">To add to your phone: open this page, tap Share → Add to Home Screen.</div>
+<div class="wrap">
+
+  <!-- ============ HOME ============ -->
+  <div id="screen-home">
+    <h1>🏌️ SBC GOLF</h1>
+    <div class="sub">Live golf scoring · play on your own phone</div>
+    <div class="card">
+      <button class="btn" onclick="showCreate()">Start a New Game</button>
+      <button class="btn alt" onclick="showJoin()">Join a Game</button>
+      <button class="btn ghost" onclick="showHistory()">Past Matches</button>
+    </div>
+    <div id="resume" class="card hide">
+      <div class="small">You were in a game:</div>
+      <button class="btn" onclick="resumeGame()" id="resumeBtn"></button>
+      <button class="btn ghost" onclick="forgetGame()">Forget it</button>
+    </div>
+  </div>
+
+  <!-- ============ CREATE ============ -->
+  <div id="screen-create" class="hide">
+    <h1>New Game</h1>
+    <div class="card">
+      <label>Game name</label>
+      <input type="text" id="gname" placeholder="Saturday Scramble" value="SBC Golf">
+
+      <label>Format</label>
+      <div class="seg" id="formatSeg">
+        <button data-f="coors_original" class="on" onclick="setFormat('coors_original')">Coors Light Cup</button>
+        <button data-f="team_match" onclick="setFormat('team_match')">9 &amp; 9 Match</button>
+      </div>
+      <div class="hint" id="formatHint" style="text-align:left;margin-top:6px">2-on-2. Each hole: 1 pt low ball + 1 pt team total. Ties score nothing.</div>
+
+      <div id="holesBlock">
+        <label>Holes</label>
+        <div class="seg" id="holesSeg">
+          <button data-h="9" onclick="setHoles(9)">9 holes</button>
+          <button data-h="18" class="on" onclick="setHoles(18)">18 holes</button>
+        </div>
+      </div>
+
+      <div id="nineBlock" class="hide">
+        <label>Front 9 format</label>
+        <div class="seg" id="front9Seg">
+          <button data-v="Scramble" class="on" onclick="setNine('front','Scramble')">Scramble</button>
+          <button data-v="Alternate Shot" onclick="setNine('front','Alternate Shot')">Alt Shot</button>
+        </div>
+        <label>Back 9 format</label>
+        <div class="seg" id="back9Seg">
+          <button data-v="Scramble" onclick="setNine('back','Scramble')">Scramble</button>
+          <button data-v="Alternate Shot" class="on" onclick="setNine('back','Alternate Shot')">Alt Shot</button>
+        </div>
+      </div>
+
+      <div class="teamhdr t1">TEAM 1</div>
+      <input type="text" id="t1name" placeholder="Team 1 name" value="Team 1">
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="t1p1" placeholder="Player 1">
+        <input type="text" id="t1p2" placeholder="Player 2">
+      </div>
+
+      <div class="teamhdr t2">TEAM 2</div>
+      <input type="text" id="t2name" placeholder="Team 2 name" value="Team 2">
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="t2p1" placeholder="Player 3">
+        <input type="text" id="t2p2" placeholder="Player 4">
+      </div>
+
+      <button class="btn" id="createBtn" onclick="doCreate()">Create Game</button>
+      <button class="btn ghost" onclick="show('home')">Back</button>
+      <div class="err" id="createErr"></div>
+    </div>
+  </div>
+
+  <!-- ============ SHARE CODE ============ -->
+  <div id="screen-share" class="hide">
+    <h1>Game Created!</h1>
+    <div class="sub">Share this code so everyone can join</div>
+    <div class="card center">
+      <div class="code" id="shareCode">----</div>
+      <div class="hint">Each player opens this same link and taps “Join a Game”.</div>
+      <button class="btn alt" onclick="copyLink()" id="copyBtn">Copy join link</button>
+    </div>
+    <div class="card">
+      <div class="small center" style="margin-bottom:8px">Who are you?</div>
+      <div id="pickPlayers"></div>
+    </div>
+  </div>
+
+  <!-- ============ JOIN ============ -->
+  <div id="screen-join" class="hide">
+    <h1>Join a Game</h1>
+    <div class="card">
+      <label>Game code</label>
+      <input type="text" id="joinCode" placeholder="ABCD" maxlength="4"
+        style="text-transform:uppercase;font-size:26px;letter-spacing:8px;text-align:center"
+        oninput="this.value=this.value.toUpperCase()">
+      <button class="btn" id="lookupBtn" onclick="doLookup()">Find Game</button>
+      <button class="btn ghost" onclick="show('home')">Back</button>
+      <div class="err" id="joinErr"></div>
+    </div>
+    <div class="card hide" id="joinPickCard">
+      <div class="small center" id="joinGameName"></div>
+      <div class="small center" style="margin-bottom:8px">Tap your name:</div>
+      <div id="joinPlayers"></div>
+    </div>
+  </div>
+
+  <!-- ============ HISTORY ============ -->
+  <div id="screen-history" class="hide">
+    <h1>Past Matches</h1>
+    <div class="sub">Tap a match to review it</div>
+    <div id="historyList"></div>
+    <button class="btn ghost" onclick="show('home')">Back</button>
+  </div>
+
+  <!-- ============ SCORING ============ -->
+  <div id="screen-play" class="hide">
+    <div class="topbar">
+      <div><span class="gamename" id="playName"></span></div>
+      <div><span class="codepill" id="playCode"></span></div>
+    </div>
+
+    <div class="card" id="entryCard">
+      <div class="holectl">
+        <button onclick="changeHole(-1)">‹</button>
+        <div class="hole"><div class="n" id="holeNum">1</div><div class="l">Hole</div></div>
+        <button onclick="changeHole(1)">›</button>
+      </div>
+      <div class="me" id="meLabel"></div>
+      <div class="stepper">
+        <button onclick="bumpStroke(-1)">–</button>
+        <div class="val" id="strokeVal">4</div>
+        <button onclick="bumpStroke(1)">+</button>
+      </div>
+      <button class="btn" id="saveBtn" onclick="saveStroke()">Save my score for this hole</button>
+      <div class="small center" id="saveMsg" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card" id="thisHoleCard">
+      <div class="small" style="margin-bottom:6px">This hole</div>
+      <div id="holeEntries"></div>
+    </div>
+
+    <div class="card scoreboard">
+      <div class="small" style="margin-bottom:8px">Standings <span class="tag" id="thruTag"></span></div>
+      <div id="teamCards"></div>
+    </div>
+
+    <div class="card">
+      <div class="small" style="margin-bottom:8px">Hole-by-hole</div>
+      <div class="hscroll"><div id="gridWrap"></div></div>
+      <div class="small" style="margin-top:8px" id="legend">● point won · ○ tie/no point. Each hole: 1 pt low ball + 1 pt team total.</div>
+    </div>
+
+    <button class="btn ghost" id="bottomBtn" onclick="leaveGame()">Leave game</button>
+  </div>
+
+</div>
+
 <script>
-/* ⬇️ PASTE YOUR APPS SCRIPT WEB APP /exec URL BETWEEN THE QUOTES ⬇️ */
-var APP_URL = 'https://script.google.com/macros/s/AKfycbz-Fy3EiLy43LePFvMvYj95rPrRtWrGsJH3rBC3YW0HyRZXjuguf7E1q3ymfd7yJvi8pw/exec';
-/* ⬆️ ------------------------------------------------------------- ⬆️ */
+  // ---------------- state ----------------
+  var ST = {
+    gameId:null, code:null, game:null, state:null,
+    myPlayerId:null, hole:1, holes:18,
+    format:'coors_original', front9:'Scramble', back9:'Alternate Shot',
+    strokeDraft:{}, poll:null, review:false
+  };
+  function esc(s){ var d=document.createElement('div'); d.textContent=String(s==null?'':s); return d.innerHTML; }
+  var LS_KEY = 'coorsCup';
 
-var qs = location.search;
-var standalone = navigator.standalone === true ||
-  (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
-/* ?setup suppresses the auto-redirect in a normal browser tab (so you can
-   Add to Home Screen). Launched FROM the home-screen icon it still redirects. */
-var setup = qs.indexOf('setup') !== -1 && !standalone;
-var ready = APP_URL && APP_URL.indexOf('PASTE_') === -1;
+  // ⬇️ Apps Script web-app /exec URL (the JSON API). Plain /macros/s/ form. ⬇️
+  var EXEC_URL = 'https://script.google.com/macros/s/AKfycbz-Fy3EiLy43LePFvMvYj95rPrRtWrGsJH3rBC3YW0HyRZXjuguf7E1q3ymfd7yJvi8pw/exec';
+  // ⬆️ -------------------------------------------------------------------- ⬆️
 
-document.getElementById('open').href = ready ? APP_URL : '#';
+  // ---------------- helpers ----------------
+  function $(id){return document.getElementById(id);}
+  function show(name){
+    ['home','create','share','join','play','history'].forEach(function(s){
+      $('screen-'+s).classList.toggle('hide', s!==name);
+    });
+    window.scrollTo(0,0);
+  }
+  // Transport: POST {fn,args} as text/plain (no CORS preflight) to the API.
+  function call(fn, args){
+    return fetch(EXEC_URL, { method:'POST', body: JSON.stringify({ fn:fn, args:args||[] }) })
+      .then(function(r){ if(!r.ok) throw new Error('Network error ('+r.status+')'); return r.json(); })
+      .then(function(res){ if(res.ok) return res.result; throw new Error(res.error||'Server error'); });
+  }
+  function saveLocal(){
+    try{ localStorage.setItem(LS_KEY, JSON.stringify({
+      gameId:ST.gameId, code:ST.code, myPlayerId:ST.myPlayerId
+    })); }catch(e){}
+  }
+  function clearLocal(){ try{ localStorage.removeItem(LS_KEY); }catch(e){} }
 
-if (!ready) {
-  /* URL not filled in yet — just show the splash, no redirect. */
-  document.getElementById('spin').style.display = 'none';
-  document.getElementById('hint').textContent = 'Set APP_URL in index.html to finish setup.';
-} else if (setup) {
-  document.getElementById('spin').style.display = 'none';
-  document.getElementById('open').style.display = '';
-} else {
-  setTimeout(function(){ location.replace(APP_URL); }, 400);
-}
-</script>
-</body>
-</html>
+  // ---------------- home / resume ----------------
+  function init(){
+    var saved=null;
+    try{ saved=JSON.parse(localStorage.getItem(LS_KEY)||'null'); }catch(e){}
+    if(saved && saved.gameId && saved.myPlayerId){
+      $('resume').classList.remove('hide');
+      $('resumeBtn').textContent='Resume game '+saved.code;
+      ST._saved=saved;
+    }
+    show('home');
+  }
+  function resumeGame(){
+    var s=ST._saved; if(!s) return;
+    ST.gameId=s.gameId; ST.code=s.code; ST.myPlayerId=s.myPlayerId;
+    enterPlay();
+  }
+  function forgetGame(){ clearLocal(); $('resume').classList.add('hide'); }
+
+  // ---------------- create ----------------
+  function showCreate(){ show('create'); }
+  function setHoles(h){
+    ST.holes=h;
+    Array.prototype.forEach.call($('holesSeg').children,function(b){
+      b.classList.toggle('on', Number(b.dataset.h)===h);
+    });
+  }
+  function setFormat(f){
+    ST.format=f;
+    Array.prototype.forEach.call($('formatSeg').children,function(b){
+      b.classList.toggle('on', b.dataset.f===f);
+    });
+    var team = f==='team_match';
+    $('holesBlock').classList.toggle('hide', team);
+    $('nineBlock').classList.toggle('hide', !team);
+    $('formatHint').textContent = team
+      ? '2-man teams, 18 holes (9 + 9). One team score per hole; low score wins the hole, ties push. No points on a tie.'
+      : '2-on-2. Each hole: 1 pt low ball + 1 pt team total. Ties score nothing.';
+    if(team) ST.holes=18;
+  }
+  function setNine(which, v){
+    if(which==='front'){ ST.front9=v; toggleSeg('front9Seg', v); }
+    else { ST.back9=v; toggleSeg('back9Seg', v); }
+  }
+  function toggleSeg(id, v){
+    Array.prototype.forEach.call($(id).children,function(b){
+      b.classList.toggle('on', b.dataset.v===v);
+    });
+  }
+  function doCreate(){
+    var t1p1=$('t1p1').value.trim(), t1p2=$('t1p2').value.trim();
+    var t2p1=$('t2p1').value.trim(), t2p2=$('t2p2').value.trim();
+    if(!t1p1||!t1p2||!t2p1||!t2p2){ $('createErr').textContent='Enter all four player names.'; return; }
+    $('createBtn').disabled=true; $('createBtn').textContent='Creating…'; $('createErr').textContent='';
+    var isTeam = ST.format==='team_match';
+    var config = isTeam ? {front9:ST.front9, back9:ST.back9} : {};
+    var payload={
+      name:$('gname').value.trim()||'SBC Golf',
+      holes: isTeam ? 18 : ST.holes,
+      format: ST.format,
+      config: config,
+      teams:[
+        {name:$('t1name').value.trim()||'Team 1', players:[{name:t1p1},{name:t1p2}]},
+        {name:$('t2name').value.trim()||'Team 2', players:[{name:t2p1},{name:t2p2}]}
+      ]
+    };
+    call('createGame',[payload]).then(function(r){
+      $('createBtn').disabled=false; $('createBtn').textContent='Create Game';
+      if(!r||!r.ok){ $('createErr').textContent=(r&&r.error)||'Could not create game.'; return; }
+      ST.gameId=r.gameId; ST.code=r.code; ST.holes=payload.holes;
+      ST.game={name:payload.name, format:payload.format, config:config,
+        teams:payload.teams.map(function(t,ti){
+        return {id:'t'+(ti+1),name:t.name,players:t.players.map(function(p,pi){return {id:'t'+(ti+1)+'p'+(pi+1),name:p.name};})};
+      })};
+      $('shareCode').textContent=r.code;
+      renderPick($('pickPlayers'), function(pid){ ST.myPlayerId=pid; enterPlay(); });
+      show('share');
+    }).catch(function(e){
+      $('createBtn').disabled=false; $('createBtn').textContent='Create Game';
+      $('createErr').textContent='Error: '+e;
+    });
+  }
+  function renderPick(container, onPick){
+    container.innerHTML='';
+    ST.game.teams.forEach(function(t,ti){
+      var h=document.createElement('div'); h.className='teamhdr '+(ti===0?'t1':'t2'); h.textContent=t.name;
+      container.appendChild(h);
+      t.players.forEach(function(p){
+        var b=document.createElement('button'); b.className='btn alt'; b.style.marginTop='8px';
+        b.textContent=p.name; b.onclick=function(){ onPick(p.id); };
+        container.appendChild(b);
+      });
+    });
+  }
+  function copyLink(){
+    var url=window.location.href;
+    navigator.clipboard && navigator.clipboard.writeText(url).then(function(){
+      $('copyBtn').textContent='Link copied!';
+      setTimeout(function(){$('copyBtn').textContent='Copy join link';},1500);
+    });
+  }
+
+  // ---------------- history ----------------
+  function showHistory(){
+    stopPoll();
+    show('history');
+    var box=$('historyList'); box.innerHTML='<div class="spinner">Loading…</div>';
+    call('listGames',[]).then(function(r){
+      if(!r||!r.ok){ box.innerHTML='<div class="card center small">Could not load matches.</div>'; return; }
+      if(!r.games.length){ box.innerHTML='<div class="card center small">No matches yet.</div>'; return; }
+      box.innerHTML='';
+      r.games.forEach(function(g){ box.appendChild(historyCard(g)); });
+    }).catch(function(e){ box.innerHTML='<div class="card center small">Error: '+esc(e)+'</div>'; });
+  }
+  function historyCard(g){
+    var fmt = g.format==='team_match' ? '9 & 9 Match' : 'Coors Light Cup';
+    var d = g.createdAt ? new Date(g.createdAt) : null;
+    var date = d ? d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}) : '';
+    var t = g.teams||[];
+    var score = t.map(function(x){return esc(x.name)+' '+x.points;}).join('  –  ');
+    var card=document.createElement('div'); card.className='teamcard'; card.style.cursor='pointer';
+    card.onclick=function(){ reviewGame(g.gameId); };
+    card.innerHTML='<div><div class="nm">'+esc(g.name||'Match')+'</div>'+
+      '<div class="pl">'+date+' · '+fmt+' · '+g.holes+' holes · thru '+g.completedHoles+'/'+g.holes+'</div>'+
+      '<div class="brk" style="margin-top:4px">'+score+'</div></div>'+
+      '<div class="pts" style="font-size:20px;align-self:center">›</div>';
+    return card;
+  }
+  function reviewGame(gameId){
+    stopPoll();
+    ST.gameId=gameId; ST.review=true;
+    show('play');
+    call('getState',[gameId]).then(function(r){
+      if(r&&r.ok){
+        ST.state=r; ST.game=r.game; ST.holes=r.game.holes;
+        $('playName').textContent=(ST.game.name||'SBC Golf');
+        $('playCode').textContent=ST.game.code||'';
+        setPlayMode(true);
+        renderScoreboard();
+      }
+    });
+  }
+  function setPlayMode(review){
+    ST.review=!!review;
+    $('entryCard').classList.toggle('hide', ST.review);
+    $('thisHoleCard').classList.toggle('hide', ST.review);
+    var b=$('bottomBtn');
+    if(ST.review){ b.textContent='Back to Past Matches'; b.onclick=showHistory; }
+    else { b.textContent='Leave game'; b.onclick=leaveGame; }
+  }
+
+  // ---------------- join ----------------
+  function showJoin(){ show('join'); $('joinPickCard').classList.ad
