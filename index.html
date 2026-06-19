@@ -79,6 +79,9 @@
     .small{font-size:12px;color:var(--muted)}
     .spinner{text-align:center;color:var(--muted);padding:20px}
     .tag{display:inline-block;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:2px 9px;margin-left:6px}
+    .scorer{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px}
+    .scorer button{padding:7px 13px;border-radius:20px;background:var(--panel2);color:var(--muted);border:1px solid var(--line);font-size:13px;font-weight:600}
+    .scorer button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
   </style>
 </head>
 <body>
@@ -205,6 +208,7 @@
     </div>
 
     <div class="card" id="entryCard">
+      <div class="scorer hide" id="scorerBar"></div>
       <div class="holectl">
         <button onclick="changeHole(-1)">‹</button>
         <div class="hole"><div class="n" id="holeNum">1</div><div class="l">Hole</div></div>
@@ -247,7 +251,7 @@
     gameId:null, code:null, game:null, state:null,
     myPlayerId:null, hole:1, holes:18,
     format:'coors_original', front9:'Scramble', back9:'Alternate Shot',
-    strokeDraft:{}, poll:null, review:false
+    strokeDraft:{}, poll:null, review:false, isHost:false, scoreAs:null
   };
   function esc(s){ var d=document.createElement('div'); d.textContent=String(s==null?'':s); return d.innerHTML; }
   var LS_KEY = 'coorsCup';
@@ -272,7 +276,7 @@
   }
   function saveLocal(){
     try{ localStorage.setItem(LS_KEY, JSON.stringify({
-      gameId:ST.gameId, code:ST.code, myPlayerId:ST.myPlayerId
+      gameId:ST.gameId, code:ST.code, myPlayerId:ST.myPlayerId, isHost:ST.isHost
     })); }catch(e){}
   }
   function clearLocal(){ try{ localStorage.removeItem(LS_KEY); }catch(e){} }
@@ -290,7 +294,7 @@
   }
   function resumeGame(){
     var s=ST._saved; if(!s) return;
-    ST.gameId=s.gameId; ST.code=s.code; ST.myPlayerId=s.myPlayerId;
+    ST.gameId=s.gameId; ST.code=s.code; ST.myPlayerId=s.myPlayerId; ST.isHost=!!s.isHost;
     enterPlay();
   }
   function forgetGame(){ clearLocal(); $('resume').classList.add('hide'); }
@@ -351,7 +355,7 @@
         return {id:'t'+(ti+1),name:t.name,players:t.players.map(function(p,pi){return {id:'t'+(ti+1)+'p'+(pi+1),name:p.name};})};
       })};
       $('shareCode').textContent=r.code;
-      renderPick($('pickPlayers'), function(pid){ ST.myPlayerId=pid; enterPlay(); });
+      renderPick($('pickPlayers'), function(pid){ ST.myPlayerId=pid; ST.isHost=true; enterPlay(); });
       show('share');
     }).catch(function(e){
       $('createBtn').disabled=false; $('createBtn').textContent='Create Game';
@@ -396,13 +400,22 @@
     var date = d ? d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}) : '';
     var t = g.teams||[];
     var score = t.map(function(x){return esc(x.name)+' '+x.points;}).join('  –  ');
-    var card=document.createElement('div'); card.className='teamcard'; card.style.cursor='pointer';
-    card.onclick=function(){ reviewGame(g.gameId); };
-    card.innerHTML='<div><div class="nm">'+esc(g.name||'Match')+'</div>'+
+    var card=document.createElement('div'); card.className='teamcard';
+    var info=document.createElement('div'); info.style.cursor='pointer'; info.style.flex='1';
+    info.onclick=function(){ reviewGame(g.gameId); };
+    info.innerHTML='<div class="nm">'+esc(g.name||'Match')+'</div>'+
       '<div class="pl">'+date+' · '+fmt+' · '+g.holes+' holes · thru '+g.completedHoles+'/'+g.holes+'</div>'+
-      '<div class="brk" style="margin-top:4px">'+score+'</div></div>'+
-      '<div class="pts" style="font-size:20px;align-self:center">›</div>';
+      '<div class="brk" style="margin-top:4px">'+score+'</div>';
+    var del=document.createElement('button'); del.textContent='✕';
+    del.style.cssText='width:auto;margin:0 0 0 10px;padding:8px 12px;align-self:center;background:transparent;color:var(--red);border:1px solid var(--line);border-radius:10px';
+    del.onclick=function(ev){ ev.stopPropagation(); deleteMatch(g); };
+    card.appendChild(info); card.appendChild(del);
     return card;
+  }
+  function deleteMatch(g){
+    if(!confirm('Delete "'+(g.name||'this match')+'"? This cannot be undone.')) return;
+    call('deleteGame',[g.gameId]).then(function(){ showHistory(); })
+      .catch(function(e){ alert('Could not delete: '+e); });
   }
   function reviewGame(gameId){
     stopPoll();
@@ -438,7 +451,7 @@
       if(!r||!r.ok){ $('joinErr').textContent=(r&&r.error)||'Game not found.'; return; }
       ST.gameId=r.game.gameId; ST.code=r.game.code; ST.game=r.game; ST.holes=r.game.holes;
       $('joinGameName').textContent=r.game.name+' · '+r.game.holes+' holes';
-      renderPick($('joinPlayers'), function(pid){ ST.myPlayerId=pid; enterPlay(); });
+      renderPick($('joinPlayers'), function(pid){ ST.myPlayerId=pid; ST.isHost=false; enterPlay(); });
       $('joinPickCard').classList.remove('hide');
     }).catch(function(e){
       $('lookupBtn').disabled=false; $('lookupBtn').textContent='Find Game';
@@ -451,6 +464,7 @@
     saveLocal();
     show('play');
     setPlayMode(false);
+    ST.scoreAs=null;
     $('playName').textContent=(ST.game&&ST.game.name)||'SBC Golf';
     $('playCode').textContent=ST.code;
     ST.hole=1;
@@ -470,11 +484,42 @@
   // ---- format helpers ----
   function isTeam(){ return ST.game && ST.game.format==='team_match'; }
   function myTeamId(){ return String(ST.myPlayerId||'').split('p')[0]; }   // 't1p2' -> 't1'
-  function myTeam(){
-    var id=myTeamId();
-    return (ST.game.teams||[]).filter(function(t){return t.id===id;})[0]||null;
+  function myTeam(){ return teamForId(myTeamId()); }
+  function ownId(){ return isTeam() ? myTeamId() : ST.myPlayerId; } // this player's own key
+  function entryId(){ return ST.scoreAs || ownId(); }               // who we're scoring now
+  function nameForId(id){
+    var nm=id;
+    (ST.game.teams||[]).forEach(function(t){ t.players.forEach(function(p){ if(p.id===id) nm=p.name; }); });
+    return nm;
   }
-  function entryId(){ return isTeam() ? myTeamId() : ST.myPlayerId; } // key this device writes
+  function teamForId(id){ return (ST.game.teams||[]).filter(function(t){return t.id===id;})[0]||null; }
+  // Who the current device may score: host = everyone; others = only themselves.
+  function targets(){
+    if(isTeam()){
+      var teams=ST.game.teams||[];
+      if(ST.isHost) return teams.map(function(t){return {id:t.id,label:t.name};});
+      var mt=myTeam();
+      return [{id:myTeamId(), label:(mt?mt.name:'My team')}];
+    }
+    var out=[];
+    (ST.game.teams||[]).forEach(function(t){ t.players.forEach(function(p){ out.push({id:p.id,label:p.name}); }); });
+    return ST.isHost ? out : out.filter(function(o){return o.id===ST.myPlayerId;});
+  }
+  function renderScorerBar(){
+    var bar=$('scorerBar'); if(!bar) return;
+    var ts=targets();
+    if(!ST.isHost || ts.length<=1){ bar.innerHTML=''; bar.classList.add('hide'); return; }
+    bar.classList.remove('hide');
+    bar.innerHTML='<div class="small" style="width:100%;text-align:center;margin-bottom:2px">Host — score for:</div>';
+    var hs=(ST.state&&ST.state.scores&&ST.state.scores[ST.hole])||{};
+    ts.forEach(function(o){
+      var b=document.createElement('button');
+      b.textContent=o.label+(typeof hs[o.id]==='number'?' ✓':'');
+      if(o.id===entryId()) b.className='on';
+      b.onclick=function(){ ST.scoreAs=o.id; renderHole(); };
+      bar.appendChild(b);
+    });
+  }
   function segmentLabel(h){
     if(!isTeam()) return '';
     var c=ST.game.config||{};
@@ -516,14 +561,16 @@
     ST.strokeDraft[ST.hole]=v; $('strokeVal').textContent=v;
   }
   function renderHole(){
+    if(!ST.scoreAs) ST.scoreAs=ownId();
+    renderScorerBar();
     $('holeNum').textContent=ST.hole;
     if(isTeam()){
-      var tm=myTeam();
-      $('meLabel').textContent=(segmentLabel(ST.hole)+' · team score for '+(tm?tm.name:'your team'));
+      var tm=teamForId(entryId());
+      $('meLabel').textContent=(segmentLabel(ST.hole)+' · team score for '+(tm?tm.name:'team'));
       $('saveBtn').textContent='Save team score for this hole';
     } else {
-      $('meLabel').textContent='Entering for '+myName();
-      $('saveBtn').textContent='Save my score for this hole';
+      $('meLabel').textContent='Entering for '+nameForId(entryId());
+      $('saveBtn').textContent='Save score for this hole';
     }
     $('strokeVal').textContent=currentStrokeVal();
     $('saveMsg').textContent='';
@@ -561,8 +608,8 @@
     call('submitScore',[ST.gameId, ST.hole, entryId(), v]).then(function(r){
       $('saveBtn').disabled=false;
       if(r&&r.ok){ ST.state=r; ST.game=r.game; delete ST.strokeDraft[ST.hole];
-        $('saveMsg').textContent='Saved ✓'; renderHoleEntries(); renderScoreboard();
-        setTimeout(function(){ if(ST.hole<ST.holes){ changeHole(1); } },500);
+        $('saveMsg').textContent='Saved ✓'; renderHoleEntries(); renderScoreboard(); renderScorerBar();
+        setTimeout(function(){ if(!ST.isHost && ST.hole<ST.holes){ changeHole(1); } },500);
       } else { $('saveMsg').textContent='Save failed.'; }
     }).catch(function(e){ $('saveBtn').disabled=false; $('saveMsg').textContent='Error: '+e; });
   }
