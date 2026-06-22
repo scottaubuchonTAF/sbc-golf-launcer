@@ -95,6 +95,7 @@
       <button class="btn" onclick="showCreate()">Start a New Game</button>
       <button class="btn alt" onclick="showJoin()">Join a Game</button>
       <button class="btn ghost" onclick="showHistory()">Past Matches</button>
+      <button class="btn ghost" onclick="showStats()">Stats</button>
     </div>
     <div id="resume" class="card hide">
       <div class="small">You were in a game:</div>
@@ -200,6 +201,14 @@
     <button class="btn ghost" onclick="show('home')">Back</button>
   </div>
 
+  <!-- ============ STATS ============ -->
+  <div id="screen-stats" class="hide">
+    <h1>Stats</h1>
+    <div class="sub">All-time across saved matches</div>
+    <div id="statsBody"></div>
+    <button class="btn ghost" onclick="show('home')">Back</button>
+  </div>
+
   <!-- ============ SCORING ============ -->
   <div id="screen-play" class="hide">
     <div class="topbar">
@@ -254,7 +263,7 @@
   // ---------------- helpers ----------------
   function $(id){return document.getElementById(id);}
   function show(name){
-    ['home','create','share','join','play','history'].forEach(function(s){
+    ['home','create','share','join','play','history','stats'].forEach(function(s){
       $('screen-'+s).classList.toggle('hide', s!==name);
     });
     window.scrollTo(0,0);
@@ -379,6 +388,27 @@
       $('copyBtn').textContent='Link copied!';
       setTimeout(function(){$('copyBtn').textContent='Copy join link';},1500);
     });
+  }
+
+  // ---------------- stats ----------------
+  function showStats(){
+    stopPoll(); show('stats');
+    var box=$('statsBody'); box.innerHTML='<div class="spinner">Loading…</div>';
+    call('getStats',[]).then(function(r){
+      if(!r||!r.ok){ box.innerHTML='<div class="card center small">Could not load stats.</div>'; return; }
+      if(!r.players.length){ box.innerHTML='<div class="card center small">No matches yet.</div>'; return; }
+      var html='<div class="card"><div class="hscroll"><table class="grid">'+
+        '<tr><th style="text-align:left">Player</th><th>G</th><th>W-L-T</th><th>Pts</th><th>Avg/hole</th></tr>';
+      r.players.forEach(function(p){
+        html+='<tr><td style="text-align:left;font-weight:700">'+esc(p.name)+'</td>'+
+          '<td>'+p.games+'</td>'+
+          '<td>'+p.wins+'-'+p.losses+'-'+p.ties+'</td>'+
+          '<td class="pointmark">'+p.points+'</td>'+
+          '<td>'+(p.avg!=null?p.avg.toFixed(2):'—')+'</td></tr>';
+      });
+      html+='</table></div><div class="small" style="margin-top:8px">'+r.totalGames+' matches · W-L-T = wins-losses-ties · Avg/hole from stroke-play (Coors Light Cup) matches.</div></div>';
+      box.innerHTML=html;
+    }).catch(function(e){ box.innerHTML='<div class="card center small">Error: '+esc(e)+'</div>'; });
   }
 
   // ---------------- history ----------------
