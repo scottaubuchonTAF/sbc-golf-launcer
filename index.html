@@ -48,15 +48,20 @@
     .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
     .topbar .gamename{font-weight:700}
     .topbar .codepill{font-size:12px;color:var(--gold);border:1px solid var(--line);padding:4px 8px;border-radius:20px}
-    .holectl{display:flex;align-items:center;justify-content:space-between;margin:6px 0 14px}
+    .holectl{display:flex;align-items:center;justify-content:space-between;margin:2px 0 12px}
     .holectl button{width:46px;height:46px;font-size:24px;background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
     .holectl .hole{text-align:center}
     .holectl .hole .n{font-size:30px;font-weight:800}
     .holectl .hole .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
-    .stepper{display:flex;align-items:center;justify-content:center;gap:18px;margin:12px 0}
-    .stepper button{width:62px;height:62px;border-radius:50%;font-size:30px;background:var(--panel2);border:1px solid var(--line);color:var(--ink)}
-    .stepper .val{font-size:54px;font-weight:800;min-width:70px;text-align:center}
-    .me{font-size:13px;color:var(--muted);text-align:center;margin-bottom:4px}
+    .prow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+    .prow:last-child{border-bottom:none}
+    .prow .nm2{flex:1;min-width:0}
+    .prow .nm2 .n2{font-weight:700}
+    .prow .nm2 .s2{font-size:11px;color:var(--muted)}
+    .mini{display:flex;align-items:center;gap:12px}
+    .mini button{width:42px;height:42px;border-radius:50%;font-size:24px;background:var(--panel2);border:1px solid var(--line);color:var(--ink)}
+    .mini .mv{min-width:34px;text-align:center;font-size:26px;font-weight:800}
+    .ro{font-size:24px;font-weight:800;min-width:34px;text-align:center;color:var(--silver)}
     .scoreboard{margin-top:6px}
     .teamcard{display:flex;justify-content:space-between;align-items:center;background:var(--panel2);
       border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px}
@@ -64,10 +69,6 @@
     .teamcard .pl{font-size:12px;color:var(--muted)}
     .teamcard .pts{font-size:30px;font-weight:800}
     .brk{font-size:11px;color:var(--muted)}
-    .entry{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
-    .entry:last-child{border-bottom:none}
-    .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:#3a566f}
-    .dot.in{background:var(--green)}
     .hscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
     table.grid{border-collapse:collapse;width:100%;font-size:13px}
     table.grid th,table.grid td{border:1px solid var(--line);padding:6px 8px;text-align:center;white-space:nowrap}
@@ -79,9 +80,8 @@
     .small{font-size:12px;color:var(--muted)}
     .spinner{text-align:center;color:var(--muted);padding:20px}
     .tag{display:inline-block;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:2px 9px;margin-left:6px}
-    .scorer{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px}
-    .scorer button{padding:7px 13px;border-radius:20px;background:var(--panel2);color:var(--muted);border:1px solid var(--line);font-size:13px;font-weight:600}
-    .scorer button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+    .synced{font-size:11px;color:var(--muted);margin-left:6px}
+    .synced.off{color:var(--gold)}
   </style>
 </head>
 <body>
@@ -208,29 +208,18 @@
     </div>
 
     <div class="card" id="entryCard">
-      <div class="scorer hide" id="scorerBar"></div>
       <div class="holectl">
         <button onclick="changeHole(-1)">‹</button>
-        <div class="hole"><div class="n" id="holeNum">1</div><div class="l">Hole</div></div>
+        <div class="hole"><div class="n" id="holeNum">1</div><div class="l" id="holeLbl">Hole</div></div>
         <button onclick="changeHole(1)">›</button>
       </div>
-      <div class="me" id="meLabel"></div>
-      <div class="stepper">
-        <button onclick="bumpStroke(-1)">–</button>
-        <div class="val" id="strokeVal">4</div>
-        <button onclick="bumpStroke(1)">+</button>
-      </div>
-      <button class="btn" id="saveBtn" onclick="saveStroke()">Save my score for this hole</button>
+      <div id="holeRows"></div>
+      <button class="btn" id="saveBtn" onclick="saveHole()">Save hole</button>
       <div class="small center" id="saveMsg" style="margin-top:8px"></div>
     </div>
 
-    <div class="card" id="thisHoleCard">
-      <div class="small" style="margin-bottom:6px">This hole</div>
-      <div id="holeEntries"></div>
-    </div>
-
     <div class="card scoreboard">
-      <div class="small" style="margin-bottom:8px">Standings <span class="tag" id="thruTag"></span></div>
+      <div class="small" style="margin-bottom:8px">Standings <span class="tag" id="thruTag"></span><span class="synced" id="syncStatus"></span></div>
       <div id="teamCards"></div>
     </div>
 
@@ -248,10 +237,12 @@
 <script>
   // ---------------- state ----------------
   var ST = {
-    gameId:null, code:null, game:null, state:null,
+    gameId:null, code:null, game:null,
     myPlayerId:null, hole:1, holes:18,
     format:'coors_original', front9:'Scramble', back9:'Alternate Shot',
-    strokeDraft:{}, poll:null, review:false, isHost:false, scoreAs:null
+    isHost:false,
+    scores:{}, draft:{}, pending:{}, standings:null,
+    poll:null, syncing:false, syncErr:false, review:false, _saved:null
   };
   function esc(s){ var d=document.createElement('div'); d.textContent=String(s==null?'':s); return d.innerHTML; }
   var LS_KEY = 'coorsCup';
@@ -280,6 +271,13 @@
     })); }catch(e){}
   }
   function clearLocal(){ try{ localStorage.removeItem(LS_KEY); }catch(e){} }
+  function gKey(){ return 'sbcg:'+ST.gameId; }
+  function persist(){ try{ localStorage.setItem(gKey(), JSON.stringify({ game:ST.game, scores:ST.scores, pending:ST.pending })); }catch(e){} }
+  function loadPersist(){
+    var o=null; try{ o=JSON.parse(localStorage.getItem(gKey())||'null'); }catch(e){}
+    if(o){ if(!ST.game) ST.game=o.game; ST.scores=o.scores||{}; ST.pending=o.pending||{}; }
+    else { if(!ST.scores) ST.scores={}; ST.pending=ST.pending||{}; }
+  }
 
   // ---------------- home / resume ----------------
   function init(){
@@ -354,6 +352,7 @@
         teams:payload.teams.map(function(t,ti){
         return {id:'t'+(ti+1),name:t.name,players:t.players.map(function(p,pi){return {id:'t'+(ti+1)+'p'+(pi+1),name:p.name};})};
       })};
+      ST.scores={}; ST.pending={}; ST.draft={};
       $('shareCode').textContent=r.code;
       renderPick($('pickPlayers'), function(pid){ ST.myPlayerId=pid; ST.isHost=true; enterPlay(); });
       show('share');
@@ -414,27 +413,25 @@
   }
   function deleteMatch(g){
     if(!confirm('Delete "'+(g.name||'this match')+'"? This cannot be undone.')) return;
-    call('deleteGame',[g.gameId]).then(function(){ showHistory(); })
+    call('deleteGame',[g.gameId]).then(function(){ try{ localStorage.removeItem('sbcg:'+g.gameId); }catch(e){} showHistory(); })
       .catch(function(e){ alert('Could not delete: '+e); });
   }
   function reviewGame(gameId){
     stopPoll();
-    ST.gameId=gameId; ST.review=true;
+    ST.gameId=gameId; ST.review=true; ST.draft={}; ST.pending={};
     show('play');
     call('getState',[gameId]).then(function(r){
       if(r&&r.ok){
-        ST.state=r; ST.game=r.game; ST.holes=r.game.holes;
+        ST.game=r.game; ST.holes=r.game.holes; ST.scores=r.scores||{};
         $('playName').textContent=(ST.game.name||'SBC Golf');
         $('playCode').textContent=ST.game.code||'';
-        setPlayMode(true);
-        renderScoreboard();
+        setPlayMode(true); recompute(); renderScoreboard();
       }
     });
   }
   function setPlayMode(review){
     ST.review=!!review;
     $('entryCard').classList.toggle('hide', ST.review);
-    $('thisHoleCard').classList.toggle('hide', ST.review);
     var b=$('bottomBtn');
     if(ST.review){ b.textContent='Back to Past Matches'; b.onclick=showHistory; }
     else { b.textContent='Leave game'; b.onclick=leaveGame; }
@@ -450,6 +447,7 @@
       $('lookupBtn').disabled=false; $('lookupBtn').textContent='Find Game';
       if(!r||!r.ok){ $('joinErr').textContent=(r&&r.error)||'Game not found.'; return; }
       ST.gameId=r.game.gameId; ST.code=r.game.code; ST.game=r.game; ST.holes=r.game.holes;
+      ST.scores={}; ST.pending={}; ST.draft={};
       $('joinGameName').textContent=r.game.name+' · '+r.game.holes+' holes';
       renderPick($('joinPlayers'), function(pid){ ST.myPlayerId=pid; ST.isHost=false; enterPlay(); });
       $('joinPickCard').classList.remove('hide');
@@ -459,163 +457,219 @@
     });
   }
 
+  // ---------------- format helpers ----------------
+  function isTeam(){ return ST.game && ST.game.format==='team_match'; }
+  function myTeamId(){ return String(ST.myPlayerId||'').split('p')[0]; } // 't1p2' -> 't1'
+  function ownId(){ return isTeam() ? myTeamId() : ST.myPlayerId; }
+  function teamForId(id){ return (ST.game.teams||[]).filter(function(t){return t.id===id;})[0]||null; }
+  function segmentLabel(h){
+    if(!isTeam()) return 'Hole';
+    var c=ST.game.config||{};
+    return (h<=9) ? (c.front9||'Front 9') : (c.back9||'Back 9');
+  }
+  // Rows shown for a hole: teams (team_match) or players (coors).
+  function holeTargets(){
+    if(isTeam()){
+      return (ST.game.teams||[]).map(function(t){
+        return {id:t.id, name:t.name, sub:(t.players||[]).map(function(p){return p.name;}).join(' + ')};
+      });
+    }
+    var out=[];
+    (ST.game.teams||[]).forEach(function(t){ t.players.forEach(function(p){ out.push({id:p.id, name:p.name, sub:t.name}); }); });
+    return out;
+  }
+  function canEdit(id){ return !ST.review && (ST.isHost || id===ownId()); }
+
   // ---------------- play ----------------
   function enterPlay(){
     saveLocal();
     show('play');
     setPlayMode(false);
-    ST.scoreAs=null;
+    ST.draft={};
+    loadPersist();                 // instant offline-ready render from this phone
     $('playName').textContent=(ST.game&&ST.game.name)||'SBC Golf';
     $('playCode').textContent=ST.code;
-    ST.hole=1;
-    refresh().then(function(){
-      // jump to first hole this player hasn't entered
-      ST.hole=firstOpenHole();
-      renderHole();
-    });
+    recompute();
+    ST.hole=firstOpenHole();
+    renderHole();
+    flush();                       // push anything queued from a prior offline session
+    refresh().then(function(){ ST.hole=firstOpenHole(); renderHole(); });
     startPoll();
   }
-  function myName(){
-    if(!ST.game) return 'you';
-    var nm='you';
-    ST.game.teams.forEach(function(t){ t.players.forEach(function(p){ if(p.id===ST.myPlayerId) nm=p.name; }); });
-    return nm;
-  }
-  // ---- format helpers ----
-  function isTeam(){ return ST.game && ST.game.format==='team_match'; }
-  function myTeamId(){ return String(ST.myPlayerId||'').split('p')[0]; }   // 't1p2' -> 't1'
-  function myTeam(){ return teamForId(myTeamId()); }
-  function ownId(){ return isTeam() ? myTeamId() : ST.myPlayerId; } // this player's own key
-  function entryId(){ return ST.scoreAs || ownId(); }               // who we're scoring now
-  function nameForId(id){
-    var nm=id;
-    (ST.game.teams||[]).forEach(function(t){ t.players.forEach(function(p){ if(p.id===id) nm=p.name; }); });
-    return nm;
-  }
-  function teamForId(id){ return (ST.game.teams||[]).filter(function(t){return t.id===id;})[0]||null; }
-  // Who the current device may score: host = everyone; others = only themselves.
-  function targets(){
-    if(isTeam()){
-      var teams=ST.game.teams||[];
-      if(ST.isHost) return teams.map(function(t){return {id:t.id,label:t.name};});
-      var mt=myTeam();
-      return [{id:myTeamId(), label:(mt?mt.name:'My team')}];
-    }
-    var out=[];
-    (ST.game.teams||[]).forEach(function(t){ t.players.forEach(function(p){ out.push({id:p.id,label:p.name}); }); });
-    return ST.isHost ? out : out.filter(function(o){return o.id===ST.myPlayerId;});
-  }
-  function renderScorerBar(){
-    var bar=$('scorerBar'); if(!bar) return;
-    var ts=targets();
-    if(!ST.isHost || ts.length<=1){ bar.innerHTML=''; bar.classList.add('hide'); return; }
-    bar.classList.remove('hide');
-    bar.innerHTML='<div class="small" style="width:100%;text-align:center;margin-bottom:2px">Host — score for:</div>';
-    var hs=(ST.state&&ST.state.scores&&ST.state.scores[ST.hole])||{};
-    ts.forEach(function(o){
-      var b=document.createElement('button');
-      b.textContent=o.label+(typeof hs[o.id]==='number'?' ✓':'');
-      if(o.id===entryId()) b.className='on';
-      b.onclick=function(){ ST.scoreAs=o.id; renderHole(); };
-      bar.appendChild(b);
-    });
-  }
-  function segmentLabel(h){
-    if(!isTeam()) return '';
-    var c=ST.game.config||{};
-    return (h<=9) ? (c.front9||'Front 9') : (c.back9||'Back 9');
-  }
   function firstOpenHole(){
-    if(!ST.state) return 1;
-    var key=entryId();
-    for(var h=1;h<=ST.holes;h++){
-      var hs=(ST.state.scores&&ST.state.scores[h])||{};
-      if(typeof hs[key]!=='number') return h;
-    }
+    var key=ownId();
+    for(var h=1;h<=ST.holes;h++){ var hs=ST.scores[h]; if(!hs||typeof hs[key]!=='number') return h; }
     return ST.holes;
   }
   function startPoll(){
     stopPoll();
-    ST.poll=setInterval(function(){ refresh().then(renderScoreboard); }, 5000);
+    ST.poll=setInterval(function(){ refresh(); flush(); }, 5000);
   }
   function stopPoll(){ if(ST.poll){ clearInterval(ST.poll); ST.poll=null; } }
   function refresh(){
     return call('getState',[ST.gameId]).then(function(r){
-      if(r&&r.ok){ ST.state=r; ST.game=r.game; ST.holes=r.game.holes; renderScoreboard(); }
+      if(r&&r.ok){
+        ST.game=r.game; ST.holes=r.game.holes;
+        mergeServer(r.scores); persist(); recompute();
+        renderScoreboard();
+        if(!(ST.draft[ST.hole] && Object.keys(ST.draft[ST.hole]).length)) renderHoleRows();
+      }
       return r;
-    });
+    }).catch(function(){ return null; }); // offline: keep local
   }
   function changeHole(d){
     var h=ST.hole+d; if(h<1) h=1; if(h>ST.holes) h=ST.holes;
     ST.hole=h; renderHole();
   }
-  function currentStrokeVal(){
-    if(ST.strokeDraft[ST.hole]!=null) return ST.strokeDraft[ST.hole];
-    var hs=(ST.state&&ST.state.scores&&ST.state.scores[ST.hole])||{};
-    var key=entryId();
-    if(typeof hs[key]==='number') return hs[key];
-    return 4;
+
+  // ----- merged scores read -----
+  function rowVal(id){
+    var d=ST.draft[ST.hole]; if(d && d[id]!=null) return d[id];
+    var hs=ST.scores[ST.hole]; if(hs && typeof hs[id]==='number') return hs[id];
+    return null;
   }
-  function bumpStroke(d){
-    var v=currentStrokeVal()+d; if(v<1) v=1; if(v>15) v=15;
-    ST.strokeDraft[ST.hole]=v; $('strokeVal').textContent=v;
+  function bump(id, delta){
+    var cur=rowVal(id), nv;
+    if(cur==null) nv=4; else { nv=cur+delta; if(nv<1) nv=1; if(nv>15) nv=15; }
+    ST.draft[ST.hole]=ST.draft[ST.hole]||{}; ST.draft[ST.hole][id]=nv;
+    renderHoleRows();
   }
+
+  // ----- render -----
   function renderHole(){
-    if(!ST.scoreAs) ST.scoreAs=ownId();
-    renderScorerBar();
     $('holeNum').textContent=ST.hole;
-    if(isTeam()){
-      var tm=teamForId(entryId());
-      $('meLabel').textContent=(segmentLabel(ST.hole)+' · team score for '+(tm?tm.name:'team'));
-      $('saveBtn').textContent='Save team score for this hole';
-    } else {
-      $('meLabel').textContent='Entering for '+nameForId(entryId());
-      $('saveBtn').textContent='Save score for this hole';
-    }
-    $('strokeVal').textContent=currentStrokeVal();
+    $('holeLbl').textContent=segmentLabel(ST.hole);
     $('saveMsg').textContent='';
-    renderHoleEntries();
+    renderHoleRows();
+    renderScoreboard();
   }
-  function renderHoleEntries(){
-    var box=$('holeEntries'); box.innerHTML='';
-    var hs=(ST.state&&ST.state.scores&&ST.state.scores[ST.hole])||{};
-    if(isTeam()){
-      var mine=myTeamId();
-      (ST.game.teams||[]).forEach(function(t){
-        var v=hs[t.id]; var has=typeof v==='number';
-        var names=(t.players||[]).map(function(p){return p.name;}).join(' + ');
-        var row=document.createElement('div'); row.className='entry';
-        row.innerHTML='<span><span class="dot '+(has?'in':'')+'"></span>'+t.name+(t.id===mine?' (you)':'')+
-          ' <span class="small">'+names+'</span></span><span>'+(has?v:'—')+'</span>';
-        box.appendChild(row);
-      });
-      return;
-    }
-    (ST.game.teams||[]).forEach(function(t){
-      t.players.forEach(function(p){
-        var v=hs[p.id];
-        var row=document.createElement('div'); row.className='entry';
-        var has=typeof v==='number';
-        row.innerHTML='<span><span class="dot '+(has?'in':'')+'"></span>'+p.name+(p.id===ST.myPlayerId?' (you)':'')+'</span>'+
-          '<span>'+(has?v:'—')+'</span>';
-        box.appendChild(row);
+  function renderHoleRows(){
+    var box=$('holeRows'); if(!box) return; box.innerHTML='';
+    holeTargets().forEach(function(it){
+      var val=rowVal(it.id);
+      var row=document.createElement('div'); row.className='prow';
+      var left=document.createElement('div'); left.className='nm2';
+      left.innerHTML='<div class="n2">'+esc(it.name)+(it.id===ownId()?' (you)':'')+'</div>'+
+        (it.sub?'<div class="s2">'+esc(it.sub)+'</div>':'');
+      row.appendChild(left);
+      if(canEdit(it.id)){
+        var mini=document.createElement('div'); mini.className='mini';
+        var minus=document.createElement('button'); minus.textContent='–'; minus.onclick=function(){ bump(it.id,-1); };
+        var mv=document.createElement('div'); mv.className='mv'; mv.textContent=(val==null?'—':val);
+        var plus=document.createElement('button'); plus.textContent='+'; plus.onclick=function(){ bump(it.id,1); };
+        mini.appendChild(minus); mini.appendChild(mv); mini.appendChild(plus);
+        row.appendChild(mini);
+      } else {
+        var ro=document.createElement('div'); ro.className='ro'; ro.textContent=(val==null?'—':val);
+        row.appendChild(ro);
+      }
+      box.appendChild(row);
+    });
+  }
+  function saveHole(){
+    var d=ST.draft[ST.hole]||{}; var ids=Object.keys(d);
+    ids.forEach(function(id){ commitScore(ST.hole, id, d[id]); });
+    delete ST.draft[ST.hole];
+    persist(); recompute(); renderScoreboard();
+    $('saveMsg').textContent = ids.length ? 'Saved ✓' : 'Nothing to save on this hole';
+    flush();
+    if(ids.length && ST.hole<ST.holes) setTimeout(function(){ changeHole(1); }, 350);
+  }
+  function commitScore(hole, id, strokes){
+    ST.scores[hole]=ST.scores[hole]||{}; ST.scores[hole][id]=strokes;
+    ST.pending[hole+'|'+id]=strokes;
+  }
+
+  // ----- sync -----
+  function setSync(){
+    var el=$('syncStatus'); if(!el) return;
+    var n=Object.keys(ST.pending).length;
+    if(ST.review){ el.textContent=''; return; }
+    if(n && ST.syncErr){ el.textContent='· offline · '+n+' saved here, will sync'; el.className='synced off'; }
+    else if(n){ el.textContent='· syncing '+n+'…'; el.className='synced'; }
+    else { el.textContent='· all saved ✓'; el.className='synced'; }
+  }
+  function flush(){
+    if(ST.syncing || ST.review) { setSync(); return; }
+    var keys=Object.keys(ST.pending);
+    if(!keys.length){ ST.syncErr=false; setSync(); return; }
+    ST.syncing=true; setSync();
+    var entries=keys.map(function(k){ var p=k.split('|'); return {hole:Number(p[0]), playerId:p[1], strokes:ST.pending[k]}; });
+    call('submitScores',[ST.gameId, entries]).then(function(r){
+      ST.syncing=false;
+      if(r&&r.ok){
+        ST.syncErr=false;
+        entries.forEach(function(e){ var k=e.hole+'|'+e.playerId; if(ST.pending[k]===e.strokes) delete ST.pending[k]; });
+        mergeServer(r.scores); persist(); recompute(); renderScoreboard();
+        setSync();
+        if(Object.keys(ST.pending).length) setTimeout(flush, 1500);
+      } else { ST.syncErr=true; setSync(); setTimeout(flush, 5000); }
+    }).catch(function(){ ST.syncing=false; ST.syncErr=true; setSync(); setTimeout(flush, 5000); });
+  }
+  function mergeServer(ss){
+    ss=ss||{};
+    Object.keys(ss).forEach(function(h){
+      ST.scores[h]=ST.scores[h]||{};
+      Object.keys(ss[h]).forEach(function(id){
+        if(ST.pending[h+'|'+id]==null) ST.scores[h][id]=ss[h][id]; // unsynced local edits win
       });
     });
   }
-  function saveStroke(){
-    var v=currentStrokeVal();
-    $('saveBtn').disabled=true; $('saveMsg').textContent='Saving…';
-    call('submitScore',[ST.gameId, ST.hole, entryId(), v]).then(function(r){
-      $('saveBtn').disabled=false;
-      if(r&&r.ok){ ST.state=r; ST.game=r.game; delete ST.strokeDraft[ST.hole];
-        $('saveMsg').textContent='Saved ✓'; renderHoleEntries(); renderScoreboard(); renderScorerBar();
-        setTimeout(function(){ if(!ST.isHost && ST.hole<ST.holes){ changeHole(1); } },500);
-      } else { $('saveMsg').textContent='Save failed.'; }
-    }).catch(function(e){ $('saveBtn').disabled=false; $('saveMsg').textContent='Error: '+e; });
+
+  // ----- standings (computed locally so it works offline) -----
+  function recompute(){ ST.standings = computeStandings(ST.game, ST.scores); }
+  function computeStandings(game, scores){
+    if(!game) return null;
+    if(game.format==='team_match') return computeTeamMatch(game, scores);
+    return computeCoors(game, scores);
   }
+  function computeCoors(game, scores){
+    var teams=game.teams||[]; var totals={};
+    teams.forEach(function(t){ totals[t.id]={id:t.id,name:t.name,points:0,lowPoints:0,sumPoints:0}; });
+    var holeResults=[], completed=0;
+    for(var h=1;h<=game.holes;h++){
+      var hsc=scores[h]||{}; var teamLow={},teamSum={}; var allPresent=true;
+      teams.forEach(function(t){
+        var vals=[];
+        t.players.forEach(function(p){ var v=hsc[p.id]; if(typeof v==='number'&&!isNaN(v)) vals.push(v); else allPresent=false; });
+        if(vals.length){ teamLow[t.id]=Math.min.apply(null,vals); teamSum[t.id]=vals.reduce(function(a,b){return a+b;},0); }
+      });
+      var res={hole:h,complete:allPresent&&teams.length===2,teamLow:teamLow,teamSum:teamSum,lowWinner:null,sumWinner:null};
+      if(res.complete){
+        completed++; var a=teams[0],b=teams[1];
+        if(teamLow[a.id]<teamLow[b.id]){res.lowWinner=a.id;totals[a.id].lowPoints++;}
+        else if(teamLow[b.id]<teamLow[a.id]){res.lowWinner=b.id;totals[b.id].lowPoints++;}
+        if(teamSum[a.id]<teamSum[b.id]){res.sumWinner=a.id;totals[a.id].sumPoints++;}
+        else if(teamSum[b.id]<teamSum[a.id]){res.sumWinner=b.id;totals[b.id].sumPoints++;}
+      }
+      holeResults.push(res);
+    }
+    teams.forEach(function(t){ totals[t.id].points=totals[t.id].lowPoints+totals[t.id].sumPoints; });
+    return {format:game.format,holes:game.holes,teams:teams.map(function(t){return totals[t.id];}),holeResults:holeResults,completedHoles:completed};
+  }
+  function computeTeamMatch(game, scores){
+    var teams=game.teams||[]; var config=game.config||{}; var totals={};
+    teams.forEach(function(t){ totals[t.id]={id:t.id,name:t.name,points:0,holesWon:0}; });
+    var holeResults=[], completed=0;
+    for(var h=1;h<=game.holes;h++){
+      var hsc=scores[h]||{}; var teamScore={}; var allPresent=true;
+      teams.forEach(function(t){ var v=hsc[t.id]; if(typeof v==='number'&&!isNaN(v)) teamScore[t.id]=v; else allPresent=false; });
+      var seg=(h<=9)?(config.front9||''):(config.back9||'');
+      var res={hole:h,complete:allPresent&&teams.length===2,teamScore:teamScore,winner:null,segment:seg};
+      if(res.complete){
+        completed++; var a=teams[0],b=teams[1];
+        if(teamScore[a.id]<teamScore[b.id]){res.winner=a.id;totals[a.id].holesWon++;}
+        else if(teamScore[b.id]<teamScore[a.id]){res.winner=b.id;totals[b.id].holesWon++;}
+      }
+      holeResults.push(res);
+    }
+    teams.forEach(function(t){ totals[t.id].points=totals[t.id].holesWon; });
+    return {format:game.format,holes:game.holes,teams:teams.map(function(t){return totals[t.id];}),holeResults:holeResults,completedHoles:completed};
+  }
+
   function renderScoreboard(){
-    if(!ST.state||!ST.state.standings) return;
-    var s=ST.state.standings;
+    setSync();
+    var s=ST.standings; if(!s) return;
     $('thruTag').textContent='thru '+s.completedHoles+'/'+ST.holes;
     var team=isTeam();
     $('legend').textContent = team
@@ -624,11 +678,11 @@
     var box=$('teamCards'); box.innerHTML='';
     s.teams.forEach(function(t,ti){
       var def=(ST.game.teams||[]).filter(function(g){return g.id===t.id;})[0]||{players:[]};
-      var names=def.players.map(function(p){return p.name;}).join(' + ');
+      var names=(def.players||[]).map(function(p){return p.name;}).join(' + ');
       var brk = team ? (t.holesWon+' holes won') : ('low '+t.lowPoints+' · total '+t.sumPoints);
       var card=document.createElement('div'); card.className='teamcard';
-      card.innerHTML='<div><div class="nm '+(ti===0?'t1':'t2')+'">'+t.name+'</div>'+
-        '<div class="pl">'+names+'</div>'+
+      card.innerHTML='<div><div class="nm '+(ti===0?'t1':'t2')+'">'+esc(t.name)+'</div>'+
+        '<div class="pl">'+esc(names)+'</div>'+
         '<div class="brk">'+brk+'</div></div>'+
         '<div class="pts '+(ti===0?'t1':'t2')+'">'+t.points+'</div>';
       box.appendChild(card);
@@ -636,21 +690,18 @@
     renderGrid();
   }
   function renderGrid(){
-    if(isTeam()){ return renderTeamGrid(); }
-    var s=ST.state.standings; var teams=ST.game.teams||[];
+    if(isTeam()) return renderTeamGrid();
+    var s=ST.standings; var teams=ST.game.teams||[];
     var html='<table class="grid"><tr><th>Hole</th>';
     for(var h=1;h<=ST.holes;h++) html+='<th>'+h+'</th>';
     html+='<th>Pts</th></tr>';
     teams.forEach(function(t,ti){
-      html+='<tr><td style="text-align:left;color:'+(ti===0?'var(--blue)':'var(--red)')+';font-weight:700">'+t.name+'</td>';
+      html+='<tr><td style="text-align:left;color:'+(ti===0?'var(--blue)':'var(--red)')+';font-weight:700">'+esc(t.name)+'</td>';
       var tot=0;
       for(var h=1;h<=ST.holes;h++){
-        var hr=s.holeResults[h-1];
-        var cell='';
+        var hr=s.holeResults[h-1]; var cell='';
         if(hr&&hr.complete){
-          var lp=(hr.lowWinner===t.id)?1:0;
-          var sp=(hr.sumWinner===t.id)?1:0;
-          var pts=lp+sp; tot+=pts;
+          var lp=(hr.lowWinner===t.id)?1:0, sp=(hr.sumWinner===t.id)?1:0; tot+=lp+sp;
           cell=(lp?'●':'○')+(sp?'●':'○');
         }
         html+='<td class="'+(cell.indexOf('●')>=0?'win':'')+'">'+cell+'</td>';
@@ -661,19 +712,18 @@
     $('gridWrap').innerHTML=html;
   }
   function renderTeamGrid(){
-    var s=ST.state.standings; var teams=ST.game.teams||[]; var c=ST.game.config||{};
-    // grouped header: front 9 / back 9 segment labels
+    var s=ST.standings; var teams=ST.game.teams||[]; var c=ST.game.config||{};
     var html='<table class="grid"><tr><th rowspan="2">Team</th>'+
-      '<th colspan="9">'+(c.front9||'Front 9')+'</th>'+
-      '<th colspan="9">'+(c.back9||'Back 9')+'</th>'+
+      '<th colspan="9">'+esc(c.front9||'Front 9')+'</th>'+
+      '<th colspan="9">'+esc(c.back9||'Back 9')+'</th>'+
       '<th rowspan="2">Won</th></tr><tr>';
     for(var h=1;h<=18;h++) html+='<th>'+h+'</th>';
     html+='</tr>';
     teams.forEach(function(t,ti){
-      html+='<tr><td style="text-align:left;color:'+(ti===0?'var(--blue)':'var(--red)')+';font-weight:700">'+t.name+'</td>';
+      html+='<tr><td style="text-align:left;color:'+(ti===0?'var(--blue)':'var(--red)')+';font-weight:700">'+esc(t.name)+'</td>';
       var won=0;
       for(var h=1;h<=18;h++){
-        var hr=s.holeResults[h-1]; var cell=''; var cls='';
+        var hr=s.holeResults[h-1]; var cell='', cls='';
         if(hr&&hr.complete){
           var sc=hr.teamScore[t.id];
           if(hr.winner===t.id){ cls='win'; won++; cell=sc+' ●'; }
@@ -687,9 +737,10 @@
     html+='</table>';
     $('gridWrap').innerHTML=html;
   }
-  function leaveGame(){ stopPoll(); clearLocal(); ST.myPlayerId=null; init(); }
+  function leaveGame(){ stopPoll(); clearLocal(); ST.myPlayerId=null; ST.review=false; init(); }
 
   // boot
+  window.addEventListener('online', function(){ ST.syncErr=false; flush(); });
   window.addEventListener('load', init);
 </script>
 </body>
