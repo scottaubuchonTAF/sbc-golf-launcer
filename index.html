@@ -113,8 +113,9 @@
 
       <label>Format</label>
       <div class="seg" id="formatSeg">
-        <button data-f="coors_original" class="on" onclick="setFormat('coors_original')">Coors Light Cup</button>
-        <button data-f="team_match" onclick="setFormat('team_match')">9 &amp; 9 Match</button>
+        <button data-f="coors_original" class="on" onclick="setFormat('coors_original')">Coors Cup</button>
+        <button data-f="team_match" onclick="setFormat('team_match')">9 &amp; 9</button>
+        <button data-f="stroke" onclick="setFormat('stroke')">Stroke 1-8</button>
       </div>
       <div class="hint" id="formatHint" style="text-align:left;margin-top:6px">2-on-2. Each hole: 1 pt low ball + 1 pt team total. Ties score nothing.</div>
 
@@ -139,6 +140,29 @@
         </div>
       </div>
 
+      <div id="strokeBlock" class="hide">
+        <label>Scoring</label>
+        <div class="seg" id="scoringSeg">
+          <button data-s="gross" class="on" onclick="setScoring('gross')">Gross</button>
+          <button data-s="net" onclick="setScoring('net')">Net (handicap)</button>
+        </div>
+        <label>Course (optional)</label>
+        <div class="row">
+          <input type="text" id="courseQuery" placeholder="Search course or club">
+          <button class="btn alt" style="margin-top:0;flex:0 0 auto;width:auto;padding:13px 16px" onclick="doCourseSearch()">Search</button>
+        </div>
+        <div id="courseResults"></div>
+        <div class="hint" id="courseChosen" style="text-align:left;margin-top:6px"></div>
+        <label>Players</label>
+        <div class="holectl" style="margin:2px 0 8px">
+          <button type="button" onclick="setPCount(-1)">–</button>
+          <div class="hole"><div class="n" id="pcountVal">4</div><div class="l">Players</div></div>
+          <button type="button" onclick="setPCount(1)">+</button>
+        </div>
+        <div id="playerInputs"></div>
+      </div>
+
+      <div id="teamsBlock">
       <div class="teamhdr t1">TEAM 1</div>
       <input type="text" id="t1name" placeholder="Team 1 name" value="Team 1">
       <div class="row" style="margin-top:8px">
@@ -153,6 +177,7 @@
         <input type="text" id="t2p2" placeholder="Player 4">
       </div>
 
+      </div>
       <button class="btn" id="createBtn" onclick="doCreate()">Create Game</button>
       <button class="btn ghost" onclick="show('home')">Back</button>
       <div class="err" id="createErr"></div>
@@ -249,7 +274,7 @@
     gameId:null, code:null, game:null,
     myPlayerId:null, hole:1, holes:18,
     format:'coors_original', front9:'Scramble', back9:'Alternate Shot',
-    isHost:false,
+    isHost:false, pcount:4, scoring:'gross', course:null,
     scores:{}, draft:{}, pending:{}, standings:null,
     poll:null, syncing:false, syncErr:false, review:false, _saved:null
   };
@@ -316,16 +341,84 @@
   }
   function setFormat(f){
     ST.format=f;
-    Array.prototype.forEach.call($('formatSeg').children,function(b){
-      b.classList.toggle('on', b.dataset.f===f);
-    });
-    var team = f==='team_match';
-    $('holesBlock').classList.toggle('hide', team);
+    Array.prototype.forEach.call($('formatSeg').children,function(b){ b.classList.toggle('on', b.dataset.f===f); });
+    var team=f==='team_match', stroke=f==='stroke';
+    $('holesBlock').classList.toggle('hide', team);   // 9/18 picker for coors & stroke
     $('nineBlock').classList.toggle('hide', !team);
-    $('formatHint').textContent = team
-      ? '2-man teams, 18 holes (9 + 9). One team score per hole; low score wins the hole, ties push. No points on a tie.'
-      : '2-on-2. Each hole: 1 pt low ball + 1 pt team total. Ties score nothing.';
+    $('teamsBlock').classList.toggle('hide', stroke);
+    $('strokeBlock').classList.toggle('hide', !stroke);
+    $('formatHint').textContent = stroke
+      ? '1–8 players, individual stroke play. Optionally load a course for par + hole handicaps, and pick gross or net.'
+      : team
+        ? '2-man teams, 18 holes (9 + 9). One team score per hole; low score wins the hole, ties push.'
+        : '2-on-2. Each hole: 1 pt low ball + 1 pt team total. Ties score nothing.';
     if(team) ST.holes=18;
+    if(stroke) renderPlayerInputs();
+  }
+  // ----- stroke create helpers -----
+  function setScoring(s){ ST.scoring=s; Array.prototype.forEach.call($('scoringSeg').children,function(b){ b.classList.toggle('on', b.dataset.s===s); }); renderPlayerInputs(); }
+  function setPCount(d){ var n=ST.pcount+d; if(n<1)n=1; if(n>8)n=8; ST.pcount=n; $('pcountVal').textContent=n; renderPlayerInputs(); }
+  function renderPlayerInputs(){
+    var box=$('playerInputs'); if(!box) return;
+    var prev={}; for(var i=1;i<=8;i++){ var e=$('spname'+i); if(e)prev[i]=e.value; var hh=$('sphcp'+i); if(hh)prev['h'+i]=hh.value; }
+    box.innerHTML='';
+    for(var i=1;i<=ST.pcount;i++){
+      var row=document.createElement('div'); row.className='row'; row.style.marginTop='8px';
+      row.innerHTML='<input type="text" id="spname'+i+'" placeholder="Player '+i+'" value="'+esc(prev[i]||'')+'">'+
+        (ST.scoring==='net'?'<input type="text" id="sphcp'+i+'" inputmode="numeric" placeholder="Hcp" style="flex:0 0 72px" value="'+esc(prev['h'+i]||'')+'">':'');
+      box.appendChild(row);
+    }
+  }
+  function doCourseSearch(){
+    var q=$('courseQuery').value.trim();
+    if(q.length<3){ $('courseResults').innerHTML='<div class="small">Type at least 3 letters.</div>'; return; }
+    $('courseResults').innerHTML='<div class="small">Searching…</div>';
+    call('searchCourses',[q]).then(function(r){
+      if(!r||!r.ok||!r.courses.length){ $('courseResults').innerHTML='<div class="small">No matches.</div>'; return; }
+      $('courseResults').innerHTML='';
+      r.courses.forEach(function(c){
+        var b=document.createElement('button'); b.className='btn alt'; b.style.cssText='margin-top:6px;text-align:left';
+        b.innerHTML=esc(c.name||c.club)+' <span class="small">'+esc([c.club,c.where].filter(Boolean).join(' · '))+'</span>';
+        b.onclick=function(){ pickCourse(c.id); };
+        $('courseResults').appendChild(b);
+      });
+    }).catch(function(e){ $('courseResults').innerHTML='<div class="small">Error: '+esc(e)+' — is GOLF_API_KEY set in the script?</div>'; });
+  }
+  function pickCourse(id){
+    $('courseResults').innerHTML='<div class="small">Loading course…</div>';
+    call('importCourse',[id]).then(function(r){
+      if(!r||!r.ok){ $('courseResults').innerHTML='<div class="small">Could not load course.</div>'; return; }
+      ST.course=r.course; ST.holes=r.course.holes;
+      setHoles(r.course.holes===9?9:18);
+      $('courseResults').innerHTML='';
+      var hasSI=Object.keys(r.course.si||{}).length>0;
+      $('courseChosen').innerHTML='✓ '+esc(r.course.name)+' ('+r.course.holes+' holes'+(hasSI?', hole handicaps loaded':', no hole handicaps — net approximate')+') · <a href="#" style="color:var(--blue)" onclick="clearCourse();return false;">change</a>';
+    }).catch(function(e){ $('courseResults').innerHTML='<div class="small">Error: '+esc(e)+'</div>'; });
+  }
+  function clearCourse(){ ST.course=null; $('courseChosen').textContent=''; $('courseQuery').value=''; }
+  function doCreateStroke(){
+    var ps=[];
+    for(var i=1;i<=ST.pcount;i++){
+      var nm=($('spname'+i)?$('spname'+i).value:'').trim();
+      var hc=$('sphcp'+i)?$('sphcp'+i).value:'';
+      if(nm) ps.push({name:nm, handicap:Number(hc)||0});
+    }
+    if(!ps.length){ $('createErr').textContent='Add at least one player.'; return; }
+    $('createBtn').disabled=true; $('createBtn').textContent='Creating…'; $('createErr').textContent='';
+    var holes = ST.course ? ST.course.holes : ST.holes;
+    var payload={ name:$('gname').value.trim()||'Round', holes:holes, format:'stroke',
+      config:{ scoring:ST.scoring, course:ST.course||null, players:ps }, teams:[] };
+    call('createGame',[payload]).then(function(r){
+      $('createBtn').disabled=false; $('createBtn').textContent='Create Game';
+      if(!r||!r.ok){ $('createErr').textContent=(r&&r.error)||'Could not create game.'; return; }
+      ST.gameId=r.gameId; ST.code=r.code; ST.holes=holes;
+      ST.game={ name:payload.name, format:'stroke', teams:[], config:{ scoring:ST.scoring, course:ST.course||null,
+        players:ps.map(function(p,i){ return {id:'p'+(i+1), name:p.name, handicap:p.handicap}; }) } };
+      ST.scores={}; ST.pending={}; ST.draft={};
+      $('shareCode').textContent=r.code;
+      renderPick($('pickPlayers'), function(pid){ ST.myPlayerId=pid; ST.isHost=true; enterPlay(); });
+      show('share');
+    }).catch(function(e){ $('createBtn').disabled=false; $('createBtn').textContent='Create Game'; $('createErr').textContent='Error: '+e; });
   }
   function setNine(which, v){
     if(which==='front'){ ST.front9=v; toggleSeg('front9Seg', v); }
@@ -337,6 +430,7 @@
     });
   }
   function doCreate(){
+    if(ST.format==='stroke') return doCreateStroke();
     var t1p1=$('t1p1').value.trim(), t1p2=$('t1p2').value.trim();
     var t2p1=$('t2p1').value.trim(), t2p2=$('t2p2').value.trim();
     if(!t1p1||!t1p2||!t2p1||!t2p2){ $('createErr').textContent='Enter all four player names.'; return; }
@@ -372,6 +466,14 @@
   }
   function renderPick(container, onPick){
     container.innerHTML='';
+    if(ST.game.format==='stroke'){
+      ((ST.game.config&&ST.game.config.players)||[]).forEach(function(p){
+        var b=document.createElement('button'); b.className='btn alt'; b.style.marginTop='8px';
+        b.textContent=p.name; b.onclick=function(){ onPick(p.id); };
+        container.appendChild(b);
+      });
+      return;
+    }
     ST.game.teams.forEach(function(t,ti){
       var h=document.createElement('div'); h.className='teamhdr '+(ti===0?'t1':'t2'); h.textContent=t.name;
       container.appendChild(h);
@@ -499,6 +601,11 @@
   }
   // Rows shown for a hole: teams (team_match) or players (coors).
   function holeTargets(){
+    if(ST.game.format==='stroke'){
+      return ((ST.game.config&&ST.game.config.players)||[]).map(function(p){
+        return {id:p.id, name:p.name, sub:(p.handicap?('Hcp '+p.handicap):'')};
+      });
+    }
     if(isTeam()){
       return (ST.game.teams||[]).map(function(t){
         return {id:t.id, name:t.name, sub:(t.players||[]).map(function(p){return p.name;}).join(' + ')};
@@ -568,7 +675,10 @@
   // ----- render -----
   function renderHole(){
     $('holeNum').textContent=ST.hole;
-    $('holeLbl').textContent=segmentLabel(ST.hole);
+    var lbl=segmentLabel(ST.hole);
+    var crs=ST.game&&ST.game.config&&ST.game.config.course;
+    if(ST.game&&ST.game.format==='stroke'&&crs&&crs.pars&&crs.pars[ST.hole]) lbl='Par '+crs.pars[ST.hole];
+    $('holeLbl').textContent=lbl;
     $('saveMsg').textContent='';
     renderHoleRows();
     renderScoreboard();
@@ -650,8 +760,29 @@
   function recompute(){ ST.standings = computeStandings(ST.game, ST.scores); }
   function computeStandings(game, scores){
     if(!game) return null;
+    if(game.format==='stroke') return computeStrokeC(game, scores);
     if(game.format==='team_match') return computeTeamMatch(game, scores);
     return computeCoors(game, scores);
+  }
+  function strokesReceivedC(hcp,hole,si,holes){
+    hcp=Number(hcp)||0; if(hcp<=0) return 0;
+    var rank=(si&&si[hole])?Number(si[hole]):hole;
+    var base=Math.floor(hcp/holes), extra=hcp%holes;
+    return base+(rank<=extra?1:0);
+  }
+  function computeStrokeC(game,scores){
+    var cfg=game.config||{}; var players=cfg.players||[]; var course=cfg.course||null;
+    var si=course&&course.si?course.si:null; var pars=course&&course.pars?course.pars:null; var maxThru=0;
+    var rows=players.map(function(p){
+      var gross=0,net=0,thru=0,vsPar=0;
+      for(var h=1;h<=game.holes;h++){ var v=scores[h]&&scores[h][p.id];
+        if(typeof v==='number'&&!isNaN(v)){ thru++; gross+=v; net+=(v-strokesReceivedC(p.handicap,h,si,game.holes)); if(pars&&pars[h]) vsPar+=(v-Number(pars[h])); } }
+      if(thru>maxThru)maxThru=thru;
+      return {id:p.id,name:p.name,handicap:Number(p.handicap)||0,gross:gross,net:net,thru:thru,vsPar:vsPar};
+    });
+    var useNet=cfg.scoring==='net';
+    rows.sort(function(a,b){return useNet?(a.net-b.net):(a.gross-b.gross);});
+    return {format:'stroke',holes:game.holes,scoring:cfg.scoring||'gross',course:course,players:rows,completedHoles:maxThru};
   }
   function computeCoors(game, scores){
     var teams=game.teams||[]; var totals={};
@@ -700,6 +831,7 @@
   function renderScoreboard(){
     setSync();
     var s=ST.standings; if(!s) return;
+    if(ST.game.format==='stroke'){ renderStrokeBoard(); return; }
     $('thruTag').textContent='thru '+s.completedHoles+'/'+ST.holes;
     var team=isTeam();
     $('legend').textContent = team
@@ -720,6 +852,7 @@
     renderGrid();
   }
   function renderGrid(){
+    if(ST.game.format==='stroke') return renderStrokeGrid();
     if(isTeam()) return renderTeamGrid();
     var s=ST.standings; var teams=ST.game.teams||[];
     var html='<table class="grid"><tr><th>Hole</th>';
@@ -766,6 +899,38 @@
     });
     html+='</table>';
     $('gridWrap').innerHTML=html;
+  }
+  function renderStrokeBoard(){
+    var s=ST.standings; if(!s) return;
+    $('thruTag').textContent='thru '+s.completedHoles+'/'+ST.holes;
+    var net=s.scoring==='net';
+    $('legend').textContent=(net?'Net = gross minus handicap strokes (allocated by hole index).':'Gross stroke play — lowest total wins.')+(s.course?'':' (No course loaded.)');
+    var box=$('teamCards'); box.innerHTML='';
+    s.players.forEach(function(p,i){
+      var main=net?p.net:p.gross;
+      var subbits=[]; if(net) subbits.push('gross '+p.gross); if(p.handicap) subbits.push('hcp '+p.handicap);
+      var vp=s.course?((p.vsPar>0?'+':'')+p.vsPar+' vs par'):'';
+      var card=document.createElement('div'); card.className='teamcard';
+      card.innerHTML='<div><div class="nm">'+(i+1)+'. '+esc(p.name)+'</div>'+
+        '<div class="pl">thru '+p.thru+(vp?(' · '+vp):'')+'</div>'+
+        (subbits.length?'<div class="brk">'+esc(subbits.join(' · '))+'</div>':'')+'</div>'+
+        '<div class="pts">'+(main||0)+'</div>';
+      box.appendChild(card);
+    });
+    renderStrokeGrid();
+  }
+  function renderStrokeGrid(){
+    var players=(ST.game.config&&ST.game.config.players)||[]; var course=ST.standings&&ST.standings.course;
+    var html='<table class="grid"><tr><th style="text-align:left">Hole</th>';
+    for(var h=1;h<=ST.holes;h++) html+='<th>'+h+'</th>'; html+='<th>Tot</th></tr>';
+    if(course&&course.pars){ html+='<tr><td style="text-align:left;color:var(--muted)">Par</td>'; var pt=0;
+      for(var h=1;h<=ST.holes;h++){ var pp=course.pars[h]; if(pp)pt+=pp; html+='<td>'+(pp||'')+'</td>'; } html+='<td>'+(pt||'')+'</td></tr>'; }
+    players.forEach(function(p){
+      html+='<tr><td style="text-align:left;font-weight:700">'+esc(p.name)+'</td>'; var tot=0;
+      for(var h=1;h<=ST.holes;h++){ var v=ST.scores[h]&&ST.scores[h][p.id]; if(typeof v==='number')tot+=v; html+='<td>'+(typeof v==='number'?v:'')+'</td>'; }
+      html+='<td class="pointmark">'+(tot||'')+'</td></tr>';
+    });
+    html+='</table>'; $('gridWrap').innerHTML=html;
   }
   function leaveGame(){ stopPoll(); clearLocal(); ST.myPlayerId=null; ST.review=false; init(); }
 
