@@ -169,6 +169,11 @@
 
       <div id="twilightBlock" class="hide">
         <div class="hint" style="text-align:left;margin-top:4px">9 holes · 2-on-2 · best-ball net. Load a course above so each player can pick a tee.</div>
+        <label>Which nine?</label>
+        <div class="seg" id="twNineSeg">
+          <button data-n="front" class="on" onclick="setTwNine('front')">Front 9</button>
+          <button data-n="back" onclick="setTwNine('back')">Back 9</button>
+        </div>
         <div class="teamhdr t1">TEAM 1</div>
         <input type="text" id="twT1name" placeholder="Team 1 name" value="Team 1">
         <div id="twTeam1"></div>
@@ -289,7 +294,7 @@
     gameId:null, code:null, game:null,
     myPlayerId:null, hole:1, holes:18,
     format:'coors_original', front9:'Scramble', back9:'Alternate Shot',
-    isHost:false, pcount:4, scoring:'gross', course:null,
+    isHost:false, pcount:4, scoring:'gross', course:null, twNine:'front',
     scores:{}, draft:{}, pending:{}, standings:null,
     poll:null, syncing:false, syncErr:false, review:false, _saved:null
   };
@@ -405,6 +410,20 @@
       if(cur) sel.value=cur;
     });
   }
+  function setTwNine(n){ ST.twNine=n; Array.prototype.forEach.call($('twNineSeg').children,function(b){ b.classList.toggle('on', b.dataset.n===n); }); }
+  // Reduce a full 18-hole course to the chosen nine, renumbered 1-9 (keeps
+  // 18-hole rating/slope/par so the handicap math + halving stay correct).
+  function sliceCourse(course, nine){
+    if(!course) return course;
+    var off = nine==='back' ? 9 : 0;
+    function s9(obj){ var o={}; for(var i=1;i<=9;i++){ if(obj && obj[i+off]!=null) o[i]=obj[i+off]; } return o; }
+    return {
+      name:course.name, holes:9, nine:nine, startHole:off+1,
+      pars:s9(course.pars), si:s9(course.si),
+      rating:course.rating, slope:course.slope, par:course.par,
+      tees:(course.tees||[]).map(function(t){ return {name:t.name, rating:t.rating, slope:t.slope, par:t.par, holes:t.holes, pars:s9(t.pars), si:s9(t.si)}; })
+    };
+  }
   function doCreateTwilight(){
     if(!ST.course){ $('createErr').textContent='Load a course first (for tees + handicaps).'; return; }
     var teams=[];
@@ -420,12 +439,13 @@
     });
     if(teams[0].players.length<1||teams[1].players.length<1){ $('createErr').textContent='Add at least one player to each team.'; return; }
     $('createBtn').disabled=true; $('createBtn').textContent='Creating…'; $('createErr').textContent='';
-    var payload={ name:$('gname').value.trim()||'Twilight League', holes:9, format:'twilight', config:{ course:ST.course }, teams:teams };
+    var sliced=sliceCourse(ST.course, ST.twNine);
+    var payload={ name:$('gname').value.trim()||'Twilight League', holes:9, format:'twilight', config:{ course:sliced, nine:ST.twNine }, teams:teams };
     call('createGame',[payload]).then(function(r){
       $('createBtn').disabled=false; $('createBtn').textContent='Create Game';
       if(!r||!r.ok){ $('createErr').textContent=(r&&r.error)||'Could not create game.'; return; }
       ST.gameId=r.gameId; ST.code=r.code; ST.holes=9;
-      ST.game={ name:payload.name, format:'twilight', config:{ course:ST.course },
+      ST.game={ name:payload.name, format:'twilight', config:{ course:sliced, nine:ST.twNine },
         teams:teams.map(function(t,ti){ return { id:'t'+(ti+1), name:t.name,
           players:t.players.map(function(p,pi){ return { id:'t'+(ti+1)+'p'+(pi+1), name:p.name, handicap:p.handicap, tee:p.tee }; }) }; }) };
       ST.scores={}; ST.pending={}; ST.draft={};
@@ -756,9 +776,11 @@
 
   // ----- render -----
   function renderHole(){
-    $('holeNum').textContent=ST.hole;
-    var lbl=segmentLabel(ST.hole);
     var crs=ST.game&&ST.game.config&&ST.game.config.course;
+    var disp=ST.hole;
+    if(ST.game&&ST.game.format==='twilight'&&crs&&crs.startHole) disp=ST.hole+crs.startHole-1;
+    $('holeNum').textContent=disp;
+    var lbl=segmentLabel(ST.hole);
     if(crs&&crs.pars&&crs.pars[ST.hole]){ var pr='Par '+crs.pars[ST.hole]; lbl=(lbl&&lbl!=='Hole')?(lbl+' · '+pr):pr; }
     $('holeLbl').textContent=lbl;
     $('saveMsg').textContent='';
@@ -1065,8 +1087,9 @@
   }
   function renderTwilightGrid(){
     var s=ST.standings; var teams=ST.game.teams||[];
+    var off=((ST.game.config&&ST.game.config.course&&ST.game.config.course.startHole)||1)-1;
     var html='<table class="grid"><tr><th style="text-align:left">Team net</th>';
-    for(var h=1;h<=ST.holes;h++) html+='<th>'+h+'</th>'; html+='<th>Pts</th></tr>';
+    for(var h=1;h<=ST.holes;h++) html+='<th>'+(h+off)+'</th>'; html+='<th>Pts</th></tr>';
     teams.forEach(function(t,ti){
       html+='<tr><td style="text-align:left;color:'+(ti===0?'var(--blue)':'var(--red)')+';font-weight:700">'+esc(t.name)+'</td>'; var pts=0;
       for(var h=1;h<=ST.holes;h++){ var hr=s.holeResults[h-1]; var cell='',cls='';
