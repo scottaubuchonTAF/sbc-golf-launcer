@@ -82,6 +82,8 @@
     .tag{display:inline-block;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:2px 9px;margin-left:6px}
     .synced{font-size:11px;color:var(--muted);margin-left:6px}
     .synced.off{color:var(--gold)}
+    #formatSeg button{padding:11px 4px;font-size:12.5px}
+    .twsel{flex:1;padding:13px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:16px}
   </style>
 </head>
 <body>
@@ -112,9 +114,10 @@
 
       <label>Format</label>
       <div class="seg" id="formatSeg">
-        <button data-f="coors_original" class="on" onclick="setFormat('coors_original')">Coors Cup</button>
-        <button data-f="team_match" onclick="setFormat('team_match')">9 &amp; 9</button>
-        <button data-f="stroke" onclick="setFormat('stroke')">Stroke 1-8</button>
+        <button data-f="coors_original" class="on" onclick="setFormat('coors_original')">Coors</button>
+        <button data-f="team_match" onclick="setFormat('team_match')">9&amp;9</button>
+        <button data-f="stroke" onclick="setFormat('stroke')">Stroke</button>
+        <button data-f="twilight" onclick="setFormat('twilight')">Twilight</button>
       </div>
       <div class="hint" id="formatHint" style="text-align:left;margin-top:6px">2-on-2. Each hole: 1 pt low ball + 1 pt team total. Ties score nothing.</div>
 
@@ -162,6 +165,16 @@
           <button type="button" onclick="setPCount(1)">+</button>
         </div>
         <div id="playerInputs"></div>
+      </div>
+
+      <div id="twilightBlock" class="hide">
+        <div class="hint" style="text-align:left;margin-top:4px">9 holes · 2-on-2 · best-ball net. Load a course above so each player can pick a tee.</div>
+        <div class="teamhdr t1">TEAM 1</div>
+        <input type="text" id="twT1name" placeholder="Team 1 name" value="Team 1">
+        <div id="twTeam1"></div>
+        <div class="teamhdr t2">TEAM 2</div>
+        <input type="text" id="twT2name" placeholder="Team 2 name" value="Team 2">
+        <div id="twTeam2"></div>
       </div>
 
       <div id="teamsBlock">
@@ -345,18 +358,81 @@
   function setFormat(f){
     ST.format=f;
     Array.prototype.forEach.call($('formatSeg').children,function(b){ b.classList.toggle('on', b.dataset.f===f); });
-    var team=f==='team_match', stroke=f==='stroke';
-    $('holesBlock').classList.toggle('hide', team);   // 9/18 picker for coors & stroke
+    var team=f==='team_match', stroke=f==='stroke', tw=f==='twilight';
+    $('holesBlock').classList.toggle('hide', team||tw); // 9/18 picker for coors & stroke only
     $('nineBlock').classList.toggle('hide', !team);
-    $('teamsBlock').classList.toggle('hide', stroke);
+    $('teamsBlock').classList.toggle('hide', stroke||tw);
     $('strokeBlock').classList.toggle('hide', !stroke);
-    $('formatHint').textContent = stroke
-      ? '1–8 players, individual stroke play. Optionally load a course for par + hole handicaps, and pick gross or net.'
-      : team
-        ? '2-man teams, 18 holes (9 + 9). One team score per hole; low score wins the hole, ties push.'
-        : '2-on-2. Each hole: 1 pt low ball + 1 pt team total. Ties score nothing.';
+    $('twilightBlock').classList.toggle('hide', !tw);
+    $('formatHint').textContent = tw
+      ? '9 holes, 2-on-2, played with handicaps off your own tees. Best-ball net wins the hole (2 pts; tie 1-1).'
+      : stroke
+        ? '1–8 players, individual stroke play. Optionally load a course for par + hole handicaps, and pick gross or net.'
+        : team
+          ? '2-man teams, 18 holes (9 + 9). One team score per hole; low score wins the hole, ties push.'
+          : '2-on-2. Each hole: 1 pt low ball + 1 pt team total. Ties score nothing.';
     if(team) ST.holes=18;
+    if(tw){ ST.holes=9; renderTwilightInputs(); }
     if(stroke) renderPlayerInputs();
+  }
+  // ----- twilight create helpers -----
+  function renderTwilightInputs(){
+    ['1','2'].forEach(function(ti){
+      var box=$('twTeam'+ti); if(!box) return;
+      var prev={}; ['1','2'].forEach(function(pi){ var pid='t'+ti+'p'+pi;
+        var n=$('twn_'+pid), hh=$('twh_'+pid), te=$('twtee_'+pid);
+        if(n)prev['n'+pid]=n.value; if(hh)prev['h'+pid]=hh.value; if(te)prev['t'+pid]=te.value; });
+      box.innerHTML='';
+      ['1','2'].forEach(function(pi){
+        var pid='t'+ti+'p'+pi;
+        var row=document.createElement('div'); row.style.marginTop='8px';
+        row.innerHTML='<input type="text" id="twn_'+pid+'" placeholder="Player name" value="'+esc(prev['n'+pid]||'')+'">'+
+          '<div class="row" style="margin-top:6px">'+
+            '<input type="text" id="twh_'+pid+'" inputmode="decimal" placeholder="Index" style="flex:0 0 92px" value="'+esc(prev['h'+pid]||'')+'">'+
+            '<select id="twtee_'+pid+'" class="twsel"></select>'+
+          '</div>';
+        box.appendChild(row);
+      });
+    });
+    populateTees();
+  }
+  function populateTees(){
+    var tees=(ST.course&&ST.course.tees)||[];
+    ['t1p1','t1p2','t2p1','t2p2'].forEach(function(pid){
+      var sel=$('twtee_'+pid); if(!sel) return;
+      var cur=sel.value;
+      sel.innerHTML = tees.length ? tees.map(function(t){return '<option>'+esc(t.name)+'</option>';}).join('') : '<option value="">— load a course —</option>';
+      if(cur) sel.value=cur;
+    });
+  }
+  function doCreateTwilight(){
+    if(!ST.course){ $('createErr').textContent='Load a course first (for tees + handicaps).'; return; }
+    var teams=[];
+    ['1','2'].forEach(function(ti){
+      var tname=($('twT'+ti+'name').value||'').trim()||('Team '+ti);
+      var players=[];
+      ['1','2'].forEach(function(pi){
+        var pid='t'+ti+'p'+pi;
+        var nm=($('twn_'+pid).value||'').trim();
+        if(nm) players.push({ name:nm, handicap:Number($('twh_'+pid).value)||0, tee:($('twtee_'+pid)&&$('twtee_'+pid).value)||'' });
+      });
+      teams.push({ name:tname, players:players });
+    });
+    if(teams[0].players.length<1||teams[1].players.length<1){ $('createErr').textContent='Add at least one player to each team.'; return; }
+    $('createBtn').disabled=true; $('createBtn').textContent='Creating…'; $('createErr').textContent='';
+    var payload={ name:$('gname').value.trim()||'Twilight League', holes:9, format:'twilight', config:{ course:ST.course }, teams:teams };
+    call('createGame',[payload]).then(function(r){
+      $('createBtn').disabled=false; $('createBtn').textContent='Create Game';
+      if(!r||!r.ok){ $('createErr').textContent=(r&&r.error)||'Could not create game.'; return; }
+      ST.gameId=r.gameId; ST.code=r.code; ST.holes=9;
+      ST.game={ name:payload.name, format:'twilight', config:{ course:ST.course },
+        teams:teams.map(function(t,ti){ return { id:'t'+(ti+1), name:t.name,
+          players:t.players.map(function(p,pi){ return { id:'t'+(ti+1)+'p'+(pi+1), name:p.name, handicap:p.handicap, tee:p.tee }; }) }; }) };
+      ST.scores={}; ST.pending={}; ST.draft={};
+      $('shareCode').textContent=r.code;
+      renderPick($('pickPlayers'), function(pid){ ST.myPlayerId=pid; ST.isHost=true; enterPlay(); });
+      show('share');
+    }).catch(function(e){ $('createBtn').disabled=false; $('createBtn').textContent='Create Game'; $('createErr').textContent='Error: '+e; });
   }
   // ----- stroke create helpers -----
   function setScoring(s){ ST.scoring=s; Array.prototype.forEach.call($('scoringSeg').children,function(b){ b.classList.toggle('on', b.dataset.s===s); }); renderPlayerInputs(); }
@@ -393,6 +469,7 @@
       if(!r||!r.ok){ $('courseResults').innerHTML='<div class="small">Could not load course.</div>'; return; }
       ST.course=r.course; ST.holes=r.course.holes;
       setHoles(r.course.holes===9?9:18);
+      populateTees(); // fill Twilight per-player tee dropdowns if present
       $('courseResults').innerHTML='';
       var hasSI=Object.keys(r.course.si||{}).length>0;
       $('courseChosen').innerHTML='✓ '+esc(r.course.name)+' ('+r.course.holes+' holes'+(hasSI?', hole handicaps loaded':', no hole handicaps — net approximate')+') · <a href="#" style="color:var(--blue)" onclick="clearCourse();return false;">change</a>';
@@ -433,6 +510,7 @@
     });
   }
   function doCreate(){
+    if(ST.format==='twilight') return doCreateTwilight();
     if(ST.format==='stroke') return doCreateStroke();
     var t1p1=$('t1p1').value.trim(), t1p2=$('t1p2').value.trim();
     var t2p1=$('t2p1').value.trim(), t2p2=$('t2p2').value.trim();
@@ -764,9 +842,28 @@
   function recompute(){ ST.standings = computeStandings(ST.game, ST.scores); }
   function computeStandings(game, scores){
     if(!game) return null;
+    if(game.format==='twilight') return computeTwilightC(game, scores);
     if(game.format==='stroke') return computeStrokeC(game, scores);
     if(game.format==='team_match') return computeTeamMatch(game, scores);
     return computeCoors(game, scores);
+  }
+  function teeForC(course,name){ if(!course||!course.tees||!course.tees.length) return null; for(var i=0;i<course.tees.length;i++) if(course.tees[i].name===name) return course.tees[i]; return course.tees[0]; }
+  function allocateC(ch,holeList,si){ var recv={}; holeList.forEach(function(h){recv[h]=0;}); ch=Number(ch)||0; if(ch<=0) return recv; var order=holeList.slice().sort(function(a,b){var sa=(si&&si[a]!=null)?si[a]:a,sb=(si&&si[b]!=null)?si[b]:b;return sa-sb;}); var n=holeList.length,base=Math.floor(ch/n),extra=ch%n; holeList.forEach(function(h){recv[h]=base;}); for(var i=0;i<extra&&i<n;i++) recv[order[i]]+=1; return recv; }
+  function computeTwilightC(game,scores){
+    var teams=game.teams||[]; var course=(game.config&&game.config.course)||null;
+    var holeList=[]; for(var hh=1;hh<=game.holes;hh++) holeList.push(hh);
+    var recvBy={};
+    teams.forEach(function(t){ (t.players||[]).forEach(function(p){ var tee=teeForC(course,p.tee); var si=(tee&&tee.si)?tee.si:(course&&course.si?course.si:null); var ch18=courseHandicapC(p.handicap,tee||course); var teeHoles=(tee&&tee.holes)?tee.holes:18; var ch=Math.round(ch18*game.holes/teeHoles); recvBy[p.id]=allocateC(ch,holeList,si); }); });
+    var totals={}; teams.forEach(function(t){ totals[t.id]={id:t.id,name:t.name,points:0}; });
+    var holeResults=[],completed=0;
+    for(var h=1;h<=game.holes;h++){ var hs=scores[h]||{}; var teamNet={},have={};
+      teams.forEach(function(t){ var nets=[]; (t.players||[]).forEach(function(p){ var v=hs[p.id]; if(typeof v==='number'&&!isNaN(v)) nets.push(v-((recvBy[p.id]&&recvBy[p.id][h])||0)); }); if(nets.length){ teamNet[t.id]=Math.min.apply(null,nets); have[t.id]=true; } });
+      var a=teams[0],b=teams[1]; var complete=teams.length===2&&have[a.id]&&have[b.id];
+      var res={hole:h,complete:complete,teamNet:teamNet,winner:null,points:{}}; teams.forEach(function(t){res.points[t.id]=0;});
+      if(complete){ completed++; if(teamNet[a.id]<teamNet[b.id]){res.winner=a.id;res.points[a.id]=2;totals[a.id].points+=2;} else if(teamNet[b.id]<teamNet[a.id]){res.winner=b.id;res.points[b.id]=2;totals[b.id].points+=2;} else {res.winner='tie';res.points[a.id]=1;res.points[b.id]=1;totals[a.id].points+=1;totals[b.id].points+=1;} }
+      holeResults.push(res);
+    }
+    return {format:'twilight',holes:game.holes,teams:teams.map(function(t){return totals[t.id];}),holeResults:holeResults,completedHoles:completed};
   }
   function strokesReceivedC(hcp,hole,si,holes){
     hcp=Number(hcp)||0; if(hcp<=0) return 0;
@@ -841,6 +938,7 @@
   function renderScoreboard(){
     setSync();
     var s=ST.standings; if(!s) return;
+    if(ST.game.format==='twilight'){ renderTwilightBoard(); return; }
     if(ST.game.format==='stroke'){ renderStrokeBoard(); return; }
     $('thruTag').textContent='thru '+s.completedHoles+'/'+ST.holes;
     var team=isTeam();
@@ -862,6 +960,7 @@
     renderGrid();
   }
   function renderGrid(){
+    if(ST.game.format==='twilight') return renderTwilightGrid();
     if(ST.game.format==='stroke') return renderStrokeGrid();
     if(isTeam()) return renderTeamGrid();
     var s=ST.standings; var teams=ST.game.teams||[];
@@ -939,6 +1038,36 @@
       html+='<tr><td style="text-align:left;font-weight:700">'+esc(p.name)+'</td>'; var tot=0;
       for(var h=1;h<=ST.holes;h++){ var v=ST.scores[h]&&ST.scores[h][p.id]; if(typeof v==='number')tot+=v; html+='<td>'+(typeof v==='number'?v:'')+'</td>'; }
       html+='<td class="pointmark">'+(tot||'')+'</td></tr>';
+    });
+    html+='</table>'; $('gridWrap').innerHTML=html;
+  }
+  function renderTwilightBoard(){
+    var s=ST.standings; if(!s) return;
+    $('thruTag').textContent='thru '+s.completedHoles+'/'+ST.holes;
+    $('legend').textContent='Best-ball net each hole · low net 2 pts · tie 1-1. (Season cap 14 applied off-app.)';
+    var box=$('teamCards'); box.innerHTML='';
+    s.teams.forEach(function(t,ti){
+      var def=(ST.game.teams||[]).filter(function(g){return g.id===t.id;})[0]||{players:[]};
+      var names=(def.players||[]).map(function(p){ var tee=(p.tee||'').replace(/\s*\([MF]\)$/,''); return esc(p.name)+(p.handicap?(' '+p.handicap):'')+(tee?(' · '+esc(tee)):''); }).join('<br>');
+      var card=document.createElement('div'); card.className='teamcard';
+      card.innerHTML='<div><div class="nm '+(ti===0?'t1':'t2')+'">'+esc(t.name)+'</div>'+
+        '<div class="pl">'+names+'</div></div>'+
+        '<div class="pts '+(ti===0?'t1':'t2')+'">'+t.points+'</div>';
+      box.appendChild(card);
+    });
+    renderTwilightGrid();
+  }
+  function renderTwilightGrid(){
+    var s=ST.standings; var teams=ST.game.teams||[];
+    var html='<table class="grid"><tr><th style="text-align:left">Team net</th>';
+    for(var h=1;h<=ST.holes;h++) html+='<th>'+h+'</th>'; html+='<th>Pts</th></tr>';
+    teams.forEach(function(t,ti){
+      html+='<tr><td style="text-align:left;color:'+(ti===0?'var(--blue)':'var(--red)')+';font-weight:700">'+esc(t.name)+'</td>'; var pts=0;
+      for(var h=1;h<=ST.holes;h++){ var hr=s.holeResults[h-1]; var cell='',cls='';
+        if(hr&&hr.complete){ pts+=hr.points[t.id]; var net=hr.teamNet[t.id];
+          cls=(hr.winner===t.id)?'win':''; cell=net+(hr.winner===t.id?' ●':(hr.winner==='tie'?' ½':'')); }
+        html+='<td class="'+cls+'">'+cell+'</td>'; }
+      html+='<td class="pointmark">'+pts+'</td></tr>';
     });
     html+='</table>'; $('gridWrap').innerHTML=html;
   }
