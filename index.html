@@ -95,7 +95,6 @@
       <button class="btn" onclick="showCreate()">Start a New Game</button>
       <button class="btn alt" onclick="showJoin()">Join a Game</button>
       <button class="btn ghost" onclick="showHistory()">Past Matches</button>
-      <button class="btn ghost" onclick="showStats()">Stats</button>
     </div>
     <div id="resume" class="card hide">
       <div class="small">You were in a game:</div>
@@ -118,6 +117,16 @@
         <button data-f="stroke" onclick="setFormat('stroke')">Stroke 1-8</button>
       </div>
       <div class="hint" id="formatHint" style="text-align:left;margin-top:6px">2-on-2. Each hole: 1 pt low ball + 1 pt team total. Ties score nothing.</div>
+
+      <div id="courseBlock">
+        <label>Course (optional — adds par; required for net handicaps)</label>
+        <div class="row">
+          <input type="text" id="courseQuery" placeholder="Search course or club">
+          <button class="btn alt" style="margin-top:0;flex:0 0 auto;width:auto;padding:13px 16px" onclick="doCourseSearch()">Search</button>
+        </div>
+        <div id="courseResults"></div>
+        <div class="hint" id="courseChosen" style="text-align:left;margin-top:6px"></div>
+      </div>
 
       <div id="holesBlock">
         <label>Holes</label>
@@ -146,13 +155,6 @@
           <button data-s="gross" class="on" onclick="setScoring('gross')">Gross</button>
           <button data-s="net" onclick="setScoring('net')">Net (handicap)</button>
         </div>
-        <label>Course (optional)</label>
-        <div class="row">
-          <input type="text" id="courseQuery" placeholder="Search course or club">
-          <button class="btn alt" style="margin-top:0;flex:0 0 auto;width:auto;padding:13px 16px" onclick="doCourseSearch()">Search</button>
-        </div>
-        <div id="courseResults"></div>
-        <div class="hint" id="courseChosen" style="text-align:left;margin-top:6px"></div>
         <label>Players</label>
         <div class="holectl" style="margin:2px 0 8px">
           <button type="button" onclick="setPCount(-1)">–</button>
@@ -322,6 +324,7 @@
       $('resumeBtn').textContent='Resume game '+saved.code;
       ST._saved=saved;
     }
+    if((location.hash||'').indexOf('stats')>=0){ show('home'); showStats(); return; } // private access: golf.../#stats
     show('home');
   }
   function resumeGame(){
@@ -365,7 +368,7 @@
     for(var i=1;i<=ST.pcount;i++){
       var row=document.createElement('div'); row.className='row'; row.style.marginTop='8px';
       row.innerHTML='<input type="text" id="spname'+i+'" placeholder="Player '+i+'" value="'+esc(prev[i]||'')+'">'+
-        (ST.scoring==='net'?'<input type="text" id="sphcp'+i+'" inputmode="numeric" placeholder="Hcp" style="flex:0 0 72px" value="'+esc(prev['h'+i]||'')+'">':'');
+        (ST.scoring==='net'?'<input type="text" id="sphcp'+i+'" inputmode="decimal" placeholder="Index" style="flex:0 0 78px" value="'+esc(prev['h'+i]||'')+'">':'');
       box.appendChild(row);
     }
   }
@@ -437,6 +440,7 @@
     $('createBtn').disabled=true; $('createBtn').textContent='Creating…'; $('createErr').textContent='';
     var isTeam = ST.format==='team_match';
     var config = isTeam ? {front9:ST.front9, back9:ST.back9} : {};
+    if(ST.course) config.course = ST.course;
     var payload={
       name:$('gname').value.trim()||'SBC Golf',
       holes: isTeam ? 18 : ST.holes,
@@ -677,7 +681,7 @@
     $('holeNum').textContent=ST.hole;
     var lbl=segmentLabel(ST.hole);
     var crs=ST.game&&ST.game.config&&ST.game.config.course;
-    if(ST.game&&ST.game.format==='stroke'&&crs&&crs.pars&&crs.pars[ST.hole]) lbl='Par '+crs.pars[ST.hole];
+    if(crs&&crs.pars&&crs.pars[ST.hole]){ var pr='Par '+crs.pars[ST.hole]; lbl=(lbl&&lbl!=='Hole')?(lbl+' · '+pr):pr; }
     $('holeLbl').textContent=lbl;
     $('saveMsg').textContent='';
     renderHoleRows();
@@ -770,15 +774,21 @@
     var base=Math.floor(hcp/holes), extra=hcp%holes;
     return base+(rank<=extra?1:0);
   }
+  function courseHandicapC(index,course){
+    index=Number(index)||0;
+    if(course&&course.slope&&course.rating&&course.par) return Math.round(index*(course.slope/113)+(course.rating-course.par));
+    return Math.round(index);
+  }
   function computeStrokeC(game,scores){
     var cfg=game.config||{}; var players=cfg.players||[]; var course=cfg.course||null;
     var si=course&&course.si?course.si:null; var pars=course&&course.pars?course.pars:null; var maxThru=0;
     var rows=players.map(function(p){
+      var chcp=courseHandicapC(p.handicap,course);
       var gross=0,net=0,thru=0,vsPar=0;
       for(var h=1;h<=game.holes;h++){ var v=scores[h]&&scores[h][p.id];
-        if(typeof v==='number'&&!isNaN(v)){ thru++; gross+=v; net+=(v-strokesReceivedC(p.handicap,h,si,game.holes)); if(pars&&pars[h]) vsPar+=(v-Number(pars[h])); } }
+        if(typeof v==='number'&&!isNaN(v)){ thru++; gross+=v; net+=(v-strokesReceivedC(chcp,h,si,game.holes)); if(pars&&pars[h]) vsPar+=(v-Number(pars[h])); } }
       if(thru>maxThru)maxThru=thru;
-      return {id:p.id,name:p.name,handicap:Number(p.handicap)||0,gross:gross,net:net,thru:thru,vsPar:vsPar};
+      return {id:p.id,name:p.name,handicap:Number(p.handicap)||0,courseHcp:chcp,gross:gross,net:net,thru:thru,vsPar:vsPar};
     });
     var useNet=cfg.scoring==='net';
     rows.sort(function(a,b){return useNet?(a.net-b.net):(a.gross-b.gross);});
@@ -908,7 +918,7 @@
     var box=$('teamCards'); box.innerHTML='';
     s.players.forEach(function(p,i){
       var main=net?p.net:p.gross;
-      var subbits=[]; if(net) subbits.push('gross '+p.gross); if(p.handicap) subbits.push('hcp '+p.handicap);
+      var subbits=[]; if(net) subbits.push('gross '+p.gross); if(p.handicap) subbits.push('idx '+p.handicap+(p.courseHcp!=null?(' · plays '+p.courseHcp):''));
       var vp=s.course?((p.vsPar>0?'+':'')+p.vsPar+' vs par'):'';
       var card=document.createElement('div'); card.className='teamcard';
       card.innerHTML='<div><div class="nm">'+(i+1)+'. '+esc(p.name)+'</div>'+
