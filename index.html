@@ -770,12 +770,12 @@
     var rb=(ST.game.format==='twilight'&&ST.standings)?ST.standings.recvBy:null;
     holeTargets().forEach(function(it){
       var val=rowVal(it.id);
-      var note='';
-      if(rb){ var st=(rb[it.id]||{})[ST.hole]||0; note=st>0?(' · <span style="color:var(--gold)">+'+st+' stroke'+(st>1?'s':'')+'</span>'):' · <span style="color:var(--muted)">scratch</span>'; }
+      var badge='';
+      if(rb){ var st=(rb[it.id]||{})[ST.hole]||0; if(st>0) badge=' <span style="background:var(--gold);color:#0b1f33;font-size:12px;font-weight:800;border-radius:10px;padding:1px 8px;margin-left:6px">+'+st+'</span>'; }
       var row=document.createElement('div'); row.className='prow';
       var left=document.createElement('div'); left.className='nm2';
-      left.innerHTML='<div class="n2">'+esc(it.name)+(it.id===ownId()?' (you)':'')+'</div>'+
-        ((it.sub||note)?'<div class="s2">'+esc(it.sub||'')+note+'</div>':'');
+      left.innerHTML='<div class="n2">'+esc(it.name)+(it.id===ownId()?' (you)':'')+badge+'</div>'+
+        (it.sub?'<div class="s2">'+esc(it.sub)+'</div>':'');
       row.appendChild(left);
       if(canEdit(it.id)){
         var mini=document.createElement('div'); mini.className='mini';
@@ -1050,7 +1050,7 @@
   function renderTwilightBoard(){
     var s=ST.standings; if(!s) return;
     $('thruTag').textContent='thru '+s.completedHoles+'/'+ST.holes;
-    $('legend').textContent='Best-ball net each hole · low net 2 pts · tie 1-1. (Season cap 14 applied off-app.)';
+    $('legend').textContent='Cells = team best-ball net. ● = won the hole (2 pts) · T = tie (1 pt each). Season cap 14 applied off-app.';
     var box=$('teamCards'); box.innerHTML='';
     s.teams.forEach(function(t,ti){
       var def=(ST.game.teams||[]).filter(function(g){return g.id===t.id;})[0]||{players:[]};
@@ -1071,7 +1071,7 @@
       html+='<tr><td style="text-align:left;color:'+(ti===0?'var(--blue)':'var(--red)')+';font-weight:700">'+esc(t.name)+'</td>'; var pts=0;
       for(var h=1;h<=ST.holes;h++){ var hr=s.holeResults[h-1]; var cell='',cls='';
         if(hr&&hr.complete){ pts+=hr.points[t.id]; var net=hr.teamNet[t.id];
-          cls=(hr.winner===t.id)?'win':''; cell=net+(hr.winner===t.id?' ●':(hr.winner==='tie'?' ½':'')); }
+          cls=(hr.winner===t.id)?'win':''; cell=net+(hr.winner===t.id?' ●':(hr.winner==='tie'?' T':'')); }
         html+='<td class="'+cls+'">'+cell+'</td>'; }
       html+='<td class="pointmark">'+pts+'</td></tr>';
     });
