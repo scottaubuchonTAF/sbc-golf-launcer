@@ -258,7 +258,7 @@
   <div id="screen-play" class="hide">
     <div class="topbar">
       <div><span class="gamename" id="playName"></span></div>
-      <div><span class="codepill" id="playCode"></span></div>
+      <div><button onclick="openGPS()" style="background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:20px;padding:5px 11px;font-size:13px;font-weight:600;margin-right:6px">📍 GPS</button><span class="codepill" id="playCode"></span></div>
     </div>
 
     <div class="card" id="entryCard">
@@ -1101,10 +1101,18 @@
     html+='</table>'; $('gridWrap').innerHTML=html;
   }
   function leaveGame(){ stopPoll(); clearLocal(); ST.myPlayerId=null; ST.review=false; init(); }
+  // ---- optional GPS module hook (safe to remove with gps.js) ----
+  function openGPS(){
+    if(!window.SBCGPS){ alert('GPS module not loaded.'); return; }
+    var crs=ST.game&&ST.game.config&&ST.game.config.course;
+    var startHole=(crs&&crs.startHole)||1;
+    SBCGPS.open({ courseName:(crs&&crs.name)||('Game '+(ST.code||'')), hole:ST.hole+startHole-1, firstHole:startHole, lastHole:startHole+ST.holes-1 });
+  }
 
   // boot
   window.addEventListener('online', function(){ ST.syncErr=false; flush(); });
   window.addEventListener('load', init);
 </script>
+<script src="gps.js"></script>
 </body>
 </html>
